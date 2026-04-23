@@ -1,0 +1,89 @@
+nameOverride: ""
+fullnameOverride: ""
+
+namespaceOverride: ""
+
+image:
+  repository: joshpeng2000/jcdrawn-mobile-doublinks-private-server-image-v20260403-ataya-lab-k8s-net1-status2-api-002
+  tag: ""
+  pullPolicy: IfNotPresent
+
+podAnnotations: {}
+podLabels: {}
+
+
+imagePullSecrets: []
+
+# Single-node default: do not bind to a hostname unless you want to pin this pod.
+nodeSelector: {}
+affinity: {}
+tolerations: []
+
+network:
+  # Host NIC used by macvlan on the single Kubernetes node
+  masterInterface: ens20
+
+securityContext:
+  privileged: true
+
+multus:
+  enabled: true
+  nadName: macvlan-conf
+  interface: net1
+  ip: 192.168.101.100
+  cidr: 24
+  gateway: 192.168.101.1
+  defaultRoute: true
+
+networkAttachmentDefinition:
+  create: true
+  name: macvlan-conf
+  master: ""
+  mode: bridge
+  subnet: 192.168.101.0/24
+  rangeStart: 192.168.101.100
+  rangeEnd: 192.168.101.110
+  routes:
+    - dst: 0.0.0.0/0
+      gw: 192.168.101.1
+
+dnsConfig:
+  enabled: true
+  nameservers:
+    - 8.8.8.8
+
+env:
+  PRIVATE_SERVER_ID: ataya_private_server_container_0001
+  PRIVATE_SERVER_PW: server_container_0001@jcdrawn
+
+service:
+  enabled: false
+  type: ClusterIP
+  annotations: {}
+  ports:
+    udp30001:
+      port: 30001
+      targetPort: 30001
+      protocol: UDP
+    udp30002:
+      port: 30002
+      targetPort: 30002
+      protocol: UDP
+    udp30003:
+      port: 30003
+      targetPort: 30003
+      protocol: UDP
+    udp30007:
+      port: 30007
+      targetPort: 30007
+      protocol: UDP
+    tcp30008:
+      port: 30008
+      targetPort: 30008
+      protocol: TCP
+    ssh:
+      port: 22
+      targetPort: 22
+      protocol: TCP
+
+resources: {}

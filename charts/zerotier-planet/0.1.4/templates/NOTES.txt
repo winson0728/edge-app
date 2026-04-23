@@ -1,0 +1,6 @@
+1. Get release resources:
+   kubectl get all,pvc,network-attachment-definition -n {{ include "zerotier-planet.namespace" . }}
+
+2. Check pod network:
+   kubectl exec -it -n {{ include "zerotier-planet.namespace" . }} deploy/{{ include "zerotier-planet.fullname" . }} -- ip addr
+   kubectl exec -it -n {{ include "zerotier-planet.namespace" . }} deploy/{{ include "zerotier-planet.fullname" . }} -- ip route

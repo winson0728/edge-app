@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "doublinks.fullname" . }}
+  namespace: {{ include "doublinks.namespace" . }}
+  labels:
+    {{- include "doublinks.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "doublinks.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "doublinks.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if .Values.multus.enabled }}
+        k8s.v1.cni.cncf.io/networks: |
+          [
+            {
+              "name": {{ .Values.multus.nadName | quote }},
+              "ips": [{{ printf "%s/%v" .Values.multus.ip .Values.multus.cidr | quote }}]{{- if .Values.multus.interface }},
+              "interface": {{ .Values.multus.interface | quote }}{{- end }}{{- if .Values.multus.defaultRoute }},
+              "default-route": [{{ .Values.multus.gateway | quote }}]{{- end }}
+            }
+          ]
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.dnsConfig.enabled }}
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          {{- toYaml .Values.dnsConfig.nameservers | nindent 10 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: server30-container
+          image: {{- if .Values.image.tag }} "{{ .Values.image.repository }}:{{ .Values.image.tag }}" {{- else }} "{{ .Values.image.repository }}" {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: PRIVATE_SERVER_ID
+              value: {{ .Values.env.PRIVATE_SERVER_ID | quote }}
+            - name: PRIVATE_SERVER_PW
+              value: {{ .Values.env.PRIVATE_SERVER_PW | quote }}
+          ports:
+            - name: udp-30001
+              containerPort: 30001
+              protocol: UDP
+            - name: udp-30002
+              containerPort: 30002
+              protocol: UDP
+            - name: udp-30003
+              containerPort: 30003
+              protocol: UDP
+            - name: udp-30007
+              containerPort: 30007
+              protocol: UDP
+            - name: tcp-30008
+              containerPort: 30008
+              protocol: TCP
+            - name: ssh
+              containerPort: 22
+              protocol: TCP
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

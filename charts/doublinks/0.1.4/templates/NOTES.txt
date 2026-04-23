@@ -1,0 +1,6 @@
+1. Get release resources:
+   kubectl get all,network-attachment-definition -n {{ include "doublinks.namespace" . }}
+
+2. Check pod network:
+   kubectl exec -it -n {{ include "doublinks.namespace" . }} deploy/{{ include "doublinks.fullname" . }} -- ip addr
+   kubectl exec -it -n {{ include "doublinks.namespace" . }} deploy/{{ include "doublinks.fullname" . }} -- ip route

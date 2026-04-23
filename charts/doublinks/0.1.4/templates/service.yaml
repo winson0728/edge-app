@@ -1,0 +1,42 @@
+{{- if .Values.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "doublinks.fullname" . }}
+  namespace: {{ include "doublinks.namespace" . }}
+  labels:
+    {{- include "doublinks.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "doublinks.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: udp-30001
+      port: {{ .Values.service.ports.udp30001.port }}
+      targetPort: {{ .Values.service.ports.udp30001.targetPort }}
+      protocol: {{ .Values.service.ports.udp30001.protocol }}
+    - name: udp-30002
+      port: {{ .Values.service.ports.udp30002.port }}
+      targetPort: {{ .Values.service.ports.udp30002.targetPort }}
+      protocol: {{ .Values.service.ports.udp30002.protocol }}
+    - name: udp-30003
+      port: {{ .Values.service.ports.udp30003.port }}
+      targetPort: {{ .Values.service.ports.udp30003.targetPort }}
+      protocol: {{ .Values.service.ports.udp30003.protocol }}
+    - name: udp-30007
+      port: {{ .Values.service.ports.udp30007.port }}
+      targetPort: {{ .Values.service.ports.udp30007.targetPort }}
+      protocol: {{ .Values.service.ports.udp30007.protocol }}
+    - name: tcp-30008
+      port: {{ .Values.service.ports.tcp30008.port }}
+      targetPort: {{ .Values.service.ports.tcp30008.targetPort }}
+      protocol: {{ .Values.service.ports.tcp30008.protocol }}
+    - name: ssh
+      port: {{ .Values.service.ports.ssh.port }}
+      targetPort: {{ .Values.service.ports.ssh.targetPort }}
+      protocol: {{ .Values.service.ports.ssh.protocol }}
+{{- end }}

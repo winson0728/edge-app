@@ -1,0 +1,6 @@
+apiVersion: v2
+name: zerotier-planet
+description: ZeroTier Planet / ZTNCUI deployment with Multus macvlan support
+version: 0.1.4
+appVersion: "latest"
+type: application

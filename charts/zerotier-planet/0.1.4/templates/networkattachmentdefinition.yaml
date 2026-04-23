@@ -1,0 +1,39 @@
+{{- if and .Values.multus.enabled .Values.networkAttachmentDefinition.create }}
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: {{ .Values.networkAttachmentDefinition.name }}
+  namespace: {{ include "zerotier-planet.namespace" . }}
+  labels:
+    {{- include "zerotier-planet.labels" . | nindent 4 }}
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "type": "macvlan",
+      "master": {{ default .Values.network.masterInterface .Values.networkAttachmentDefinition.master | required "Either network.masterInterface or networkAttachmentDefinition.master must be set" | quote }},
+      "mode": {{ .Values.networkAttachmentDefinition.mode | quote }},
+      "ipam": {
+        "type": "host-local",
+        "ranges": [
+          [
+            {
+              "subnet": {{ .Values.networkAttachmentDefinition.subnet | quote }},
+              "rangeStart": {{ .Values.networkAttachmentDefinition.rangeStart | quote }},
+              "rangeEnd": {{ .Values.networkAttachmentDefinition.rangeEnd | quote }}{{- if .Values.networkAttachmentDefinition.gateway }},
+              "gateway": {{ .Values.networkAttachmentDefinition.gateway | quote }}{{- end }}
+            }
+          ]
+        ],
+        "routes": [
+          {{- range $i, $route := .Values.networkAttachmentDefinition.routes }}
+          {{- if $i }},{{ end }}
+          {
+            "dst": {{ $route.dst | quote }}{{- if hasKey $route "gw" }},
+            "gw": {{ $route.gw | quote }}{{- end }}
+          }
+          {{- end }}
+        ]
+      }
+    }
+{{- end }}

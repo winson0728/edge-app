@@ -1,0 +1,6 @@
+apiVersion: v2
+name: doublinks
+description: Doublinks private server deployment with Multus macvlan support
+version: 0.1.4
+appVersion: "v20260403"
+type: application

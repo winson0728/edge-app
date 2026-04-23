@@ -1,0 +1,38 @@
+{{- if .Values.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "zerotier-planet.fullname" . }}
+  namespace: {{ include "zerotier-planet.namespace" . }}
+  labels:
+    {{- include "zerotier-planet.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "zerotier-planet.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http-ui
+      port: {{ .Values.service.ports.httpUi.port }}
+      targetPort: {{ .Values.service.ports.httpUi.targetPort }}
+      protocol: {{ .Values.service.ports.httpUi.protocol }}
+    - name: https-ui
+      port: {{ .Values.service.ports.httpsUi.port }}
+      targetPort: {{ .Values.service.ports.httpsUi.targetPort }}
+      protocol: {{ .Values.service.ports.httpsUi.protocol }}
+    - name: file-http
+      port: {{ .Values.service.ports.fileHttp.port }}
+      targetPort: {{ .Values.service.ports.fileHttp.targetPort }}
+      protocol: {{ .Values.service.ports.fileHttp.protocol }}
+    - name: zt-tcp
+      port: {{ .Values.service.ports.ztTcp.port }}
+      targetPort: {{ .Values.service.ports.ztTcp.targetPort }}
+      protocol: {{ .Values.service.ports.ztTcp.protocol }}
+    - name: zt-udp
+      port: {{ .Values.service.ports.ztUdp.port }}
+      targetPort: {{ .Values.service.ports.ztUdp.targetPort }}
+      protocol: {{ .Values.service.ports.ztUdp.protocol }}
+{{- end }}

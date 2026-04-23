@@ -1,0 +1,18 @@
+{{- if and .Values.persistence.zerotierOne.enabled (not .Values.persistence.zerotierOne.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.persistence.zerotierOne.claimName }}
+  namespace: {{ include "zerotier-planet.namespace" . }}
+  labels:
+    {{- include "zerotier-planet.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.zerotierOne.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.zerotierOne.size }}
+  {{- if .Values.persistence.zerotierOne.storageClassName }}
+  storageClassName: {{ .Values.persistence.zerotierOne.storageClassName | quote }}
+  {{- end }}
+{{- end }}

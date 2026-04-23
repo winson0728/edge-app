@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "zerotier-planet.fullname" . }}
+  namespace: {{ include "zerotier-planet.namespace" . }}
+  labels:
+    {{- include "zerotier-planet.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "zerotier-planet.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zerotier-planet.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if .Values.multus.enabled }}
+        k8s.v1.cni.cncf.io/networks: |
+          [
+            {
+              "name": {{ .Values.multus.nadName | quote }},
+              "interface": {{ .Values.multus.interface | quote }},
+              "ips": [{{ printf "%s/%v" .Values.multus.ip .Values.multus.cidr | quote }}]{{- if .Values.multus.defaultRoute }},
+              "default-route": [{{ .Values.multus.gateway | quote }}]{{- end }}
+            }
+          ]
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.dnsConfig.enabled }}
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          {{- toYaml .Values.dnsConfig.nameservers | nindent 10 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: zerotier-planet
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: HTTP_PORT
+              value: {{ .Values.env.HTTP_PORT | quote }}
+            - name: HTTPS_PORT
+              value: {{ .Values.env.HTTPS_PORT | quote }}
+            - name: HTTP_ALL_INTERFACES
+              value: {{ .Values.env.HTTP_ALL_INTERFACES | quote }}
+            - name: MYADDR
+              value: {{ .Values.env.MYADDR | quote }}
+            - name: MYDOMAIN
+              value: {{ .Values.env.MYDOMAIN | quote }}
+            - name: ZTNCUI_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "zerotier-planet.secretName" . }}
+                  key: {{ .Values.secret.existingSecretKey }}
+          ports:
+            - name: http-ui
+              containerPort: {{ .Values.service.ports.httpUi.targetPort }}
+              protocol: TCP
+            - name: https-ui
+              containerPort: {{ .Values.service.ports.httpsUi.targetPort }}
+              protocol: TCP
+            - name: zt-tcp
+              containerPort: {{ .Values.service.ports.ztTcp.targetPort }}
+              protocol: TCP
+            - name: zt-udp
+              containerPort: {{ .Values.service.ports.ztUdp.targetPort }}
+              protocol: UDP
+            - name: file-http
+              containerPort: {{ .Values.service.ports.fileHttp.targetPort }}
+              protocol: TCP
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            {{- toYaml (omit .Values.livenessProbe "enabled") | nindent 12 }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            {{- toYaml (omit .Values.readinessProbe "enabled") | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: zerotier-one
+              mountPath: /var/lib/zerotier-one
+            - name: ztncui-etc
+              mountPath: /opt/key-networks/ztncui/etc
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: zerotier-one
+          persistentVolumeClaim:
+            claimName: {{ include "zerotier-planet.zerotierOneClaimName" . }}
+        - name: ztncui-etc
+          persistentVolumeClaim:
+            claimName: {{ include "zerotier-planet.ztncuiEtcClaimName" . }}
