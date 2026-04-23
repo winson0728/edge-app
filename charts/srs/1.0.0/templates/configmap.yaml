@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "srs.fullname" . }}-config
+  labels:
+    {{- include "srs.labels" . | nindent 4 }}
+data:
+  srs.conf: |
+{{- if .Values.config.candidate }}
+{{ .Values.config.content | replace "__CANDIDATE__" .Values.config.candidate | indent 4 }}
+{{- else }}
+{{ .Values.config.content | replace "__CANDIDATE__" "127.0.0.1" | indent 4 }}
+{{- end }}

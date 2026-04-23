@@ -1,0 +1,11 @@
+apiVersion: v2
+name: srs
+description: SRS media server for Rancher
+type: application
+version: 1.0.0
+appVersion: "6.0"
+
+annotations:
+  catalog.cattle.io/display-name: "SRS Media Server"
+  catalog.cattle.io/namespace: "media"
+  catalog.cattle.io/release-name: "srs"

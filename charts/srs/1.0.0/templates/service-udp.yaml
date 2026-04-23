@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "srs.fullname" . }}-udp
+  labels:
+    {{- include "srs.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "srs.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: webrtc
+      port: {{ .Values.service.udp.webrtc }}
+      targetPort: webrtc
+      protocol: UDP
+    - name: srt
+      port: {{ .Values.service.udp.srt }}
+      targetPort: srt
+      protocol: UDP

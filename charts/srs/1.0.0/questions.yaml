@@ -1,0 +1,163 @@
+questions:
+  - variable: replicaCount
+    default: 1
+    description: "Number of SRS pods"
+    type: int
+    required: true
+    label: "Replica Count"
+    group: "General"
+
+  - variable: image.repository
+    default: "ossrs/srs"
+    description: "Container image repository"
+    type: string
+    required: true
+    label: "Image Repository"
+    group: "General"
+
+  - variable: image.tag
+    default: "6"
+    description: "Container image tag"
+    type: string
+    required: true
+    label: "Image Tag"
+    group: "General"
+
+  - variable: service.type
+    default: "LoadBalancer"
+    description: "Kubernetes service type"
+    type: enum
+    required: true
+    label: "Service Type"
+    group: "Networking"
+    options:
+      - "ClusterIP"
+      - "NodePort"
+      - "LoadBalancer"
+
+  - variable: service.tcp.rtmp
+    default: 1935
+    description: "RTMP TCP port"
+    type: int
+    required: true
+    label: "RTMP Port"
+    group: "Networking"
+
+  - variable: service.tcp.api
+    default: 1985
+    description: "HTTP API TCP port"
+    type: int
+    required: true
+    label: "API Port"
+    group: "Networking"
+
+  - variable: service.tcp.http
+    default: 8080
+    description: "HTTP-FLV/HLS TCP port"
+    type: int
+    required: true
+    label: "HTTP Port"
+    group: "Networking"
+
+  - variable: service.udp.webrtc
+    default: 8000
+    description: "WebRTC UDP port"
+    type: int
+    required: true
+    label: "WebRTC UDP Port"
+    group: "Networking"
+
+  - variable: service.udp.srt
+    default: 10080
+    description: "SRT UDP port"
+    type: int
+    required: true
+    label: "SRT UDP Port"
+    group: "Networking"
+
+  - variable: ingress.enabled
+    default: false
+    description: "Enable ingress for HTTP service only"
+    type: boolean
+    required: true
+    label: "Enable Ingress"
+    group: "Ingress"
+
+  - variable: ingress.className
+    default: ""
+    description: "Ingress class name, e.g. nginx or traefik"
+    type: string
+    required: false
+    label: "Ingress Class"
+    group: "Ingress"
+    show_if: "ingress.enabled=true"
+
+  - variable: ingress.host
+    default: "srs.example.com"
+    description: "Ingress hostname"
+    type: hostname
+    required: false
+    label: "Ingress Host"
+    group: "Ingress"
+    show_if: "ingress.enabled=true"
+
+  - variable: ingress.path
+    default: "/"
+    description: "Ingress path"
+    type: string
+    required: false
+    label: "Ingress Path"
+    group: "Ingress"
+    show_if: "ingress.enabled=true"
+
+  - variable: ingress.tls
+    default: false
+    description: "Enable TLS for ingress"
+    type: boolean
+    required: true
+    label: "Enable Ingress TLS"
+    group: "Ingress"
+    show_if: "ingress.enabled=true"
+
+  - variable: ingress.tlsSecretName
+    default: ""
+    description: "Existing TLS secret name"
+    type: string
+    required: false
+    label: "TLS Secret Name"
+    group: "Ingress"
+    show_if: "ingress.enabled=true&&ingress.tls=true"
+
+  - variable: config.candidate
+    default: ""
+    description: "Public IP or FQDN for WebRTC candidate. Leave empty to use cluster IP placeholder."
+    type: string
+    required: false
+    label: "WebRTC Candidate"
+    group: "SRS Config"
+
+  - variable: persistence.enabled
+    default: false
+    description: "Enable persistent volume for SRS data"
+    type: boolean
+    required: true
+    label: "Enable Persistence"
+    group: "Storage"
+
+  - variable: persistence.size
+    default: "5Gi"
+    description: "Persistent volume size"
+    type: string
+    required: false
+    label: "Storage Size"
+    group: "Storage"
+    show_if: "persistence.enabled=true"
+
+  - variable: persistence.storageClass
+    default: ""
+    description: "StorageClass name, empty means cluster default"
+    type: string
+    required: false
+    label: "StorageClass"
+    group: "Storage"
+    show_if: "persistence.enabled=true"
