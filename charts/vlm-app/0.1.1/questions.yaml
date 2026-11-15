@@ -1,0 +1,50 @@
+# Rancher UI install form (Apps → Charts → vlm-app).
+questions:
+  - variable: image.tag
+    label: Image tag
+    description: "Tag of the vlm-app image already loaded on the node (pullPolicy Never)"
+    type: string
+    required: true
+    default: "latest"
+    group: Image
+  - variable: admin.password
+    label: Admin password
+    description: "First-run admin password (no default)"
+    type: password
+    required: true
+    group: Admin
+  - variable: ollama.enabled
+    label: Run Ollama as a pod
+    type: boolean
+    default: true
+    group: Ollama
+    show_subquestion_if: false
+    subquestions:
+      - variable: externalOllamaUrl
+        label: External Ollama URL
+        description: "e.g. http://<ollama-host>:11434"
+        type: string
+        required: true
+  - variable: service.web.type
+    label: Web service type
+    type: enum
+    options: [ClusterIP, NodePort]
+    default: ClusterIP
+    group: Network
+    show_subquestion_if: NodePort
+    subquestions:
+      - variable: service.web.nodePort
+        label: Web NodePort
+        type: int
+        min: 30000
+        max: 32767
+  - variable: ingress.enabled
+    label: Create an Ingress
+    type: boolean
+    default: true
+    group: Network
+  - variable: gpu.exclusive
+    label: Request nvidia.com/gpu
+    type: boolean
+    default: true
+    group: GPU
