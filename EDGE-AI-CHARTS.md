@@ -137,3 +137,6 @@ bash tools/edgeai/check.sh                          # 全部 helm lint／templat
 
 ## 8. 驗證紀錄
 見 `tools/edgeai/VERIFY.md`。
+
+## 9. 套件介紹與使用手冊
+每個套件的用途、功能、安裝前準備、基本使用，以及 5G 專網端到端情境：`docs/Edge-AI-套件介紹與使用手冊.md`。
