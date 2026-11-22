@@ -1,0 +1,4 @@
+Grafana（AGPL） 已安裝（release {{ .Release.Name }}，namespace {{ .Release.Namespace }}）。
+Pack：Observability；層級：Hub；架構：amd64, arm64。
+上游 chart：grafana 10.5.15。
+授權：AGPL-3.0（商用打包風險：中）。說明見 chart README。

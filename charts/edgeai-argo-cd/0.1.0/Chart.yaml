@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-argo-cd
+description: Argo CD（GitOps；Rancher 已內建 Fleet，兩者擇一）
+type: application
+version: 0.1.0
+appVersion: v3.6.2
+kubeVersion: '>=1.28.0-0'
+home: https://argo-cd.readthedocs.io
+keywords:
+- edge-ai
+- pack-platform
+- Infrastructure
+dependencies:
+- name: argo-cd
+  version: 10.18.2
+  repository: https://argoproj.github.io/argo-helm
+annotations:
+  catalog.cattle.io/display-name: Argo CD（選配）
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-argo-cd
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

@@ -1,0 +1,26 @@
+# Rancher 安裝表單（Apps → Charts → EdgeX Foundry（core））
+questions:
+- variable: edgex.dbExistingSecret
+  label: 資料庫密碼 Secret
+  description: 含 password 鍵
+  type: string
+  required: true
+  group: 資料庫
+- variable: components.database.persistence.enabled
+  label: 資料庫持久化（PVC）
+  type: boolean
+  default: false
+  group: 資料庫
+- variable: components.ui.enabled
+  label: 安裝 EdgeX UI
+  type: boolean
+  default: true
+  group: UI
+- variable: components.ui.service.type
+  label: UI Service 類型
+  type: enum
+  options:
+  - ClusterIP
+  - NodePort
+  default: ClusterIP
+  group: UI

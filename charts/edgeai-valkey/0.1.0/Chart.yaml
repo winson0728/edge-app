@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-valkey
+description: Valkey（Redis 相容；sim-aaa-adapter AV 快取、event engine 去重）
+type: application
+version: 0.1.0
+appVersion: 9.1.3
+kubeVersion: '>=1.28.0-0'
+home: https://valkey.io
+keywords:
+- edge-ai
+- pack-platform
+- Database
+dependencies:
+- name: valkey
+  version: 1.0.0
+  repository: https://valkey.io/valkey-helm/
+annotations:
+  catalog.cattle.io/display-name: Valkey
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-valkey
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub、Node
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: BSD-3-Clause
+  edge-ai/chart-kind: upstream-wrapper

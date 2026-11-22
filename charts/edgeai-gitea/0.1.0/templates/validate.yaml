@@ -1,0 +1,4 @@
+{{- /* 安裝前檢查：必填的 Secret 名稱等 */ -}}
+{{- if not (index .Values "gitea" "gitea" "admin" "existingSecret") }}
+{{- fail "gitea.gitea.admin.existingSecret 必填（含 username／password，避免上游預設管理者密碼）" }}
+{{- end }}

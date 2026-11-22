@@ -1,0 +1,4 @@
+vLLM（production-stack） 已安裝（release {{ .Release.Name }}，namespace {{ .Release.Namespace }}）。
+Pack：RAG；層級：Hub、Node；架構：amd64（Thor／Spark 需改用 NVIDIA 提供的 arm64 vLLM 映像）。
+上游 chart：vllm-stack 0.1.14。
+授權：Apache-2.0（商用打包風險：低）。說明見 chart README。

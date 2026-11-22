@@ -1,0 +1,8 @@
+# Rancher 安裝表單（Apps → Charts → Kyverno）
+questions:
+- variable: kyverno.admissionController.replicas
+  label: Admission controller 副本數
+  description: 單節點 1；HA 3
+  type: int
+  default: 1
+  group: 規模

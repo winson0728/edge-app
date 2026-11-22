@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-gitea
+description: Gitea（GitOps values repo，edge-app-catalog-controller 寫入）
+type: application
+version: 0.1.0
+appVersion: 1.27.0
+kubeVersion: '>=1.28.0-0'
+home: https://gitea.com
+keywords:
+- edge-ai
+- pack-platform
+- Repository
+dependencies:
+- name: gitea
+  version: 12.7.0
+  repository: https://dl.gitea.com/charts/
+annotations:
+  catalog.cattle.io/display-name: Gitea
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-gitea
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: MIT
+  edge-ai/chart-kind: upstream-wrapper

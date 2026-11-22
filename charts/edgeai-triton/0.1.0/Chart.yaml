@@ -1,0 +1,25 @@
+apiVersion: v2
+name: edgeai-triton
+description: NVIDIA Triton 推論伺服器（YOLO／TensorRT 模型服務，需 GPU）
+type: application
+version: 0.1.0
+appVersion: '26.11'
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/triton-inference-server/server
+keywords:
+- edge-ai
+- pack-vision
+- Applications
+annotations:
+  catalog.cattle.io/display-name: Triton Inference Server
+  catalog.cattle.io/certified: Vision
+  catalog.cattle.io/namespace: edgeai-vision
+  catalog.cattle.io/release-name: edgeai-triton
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Vision
+  edge-ai/tier: Hub、Node
+  edge-ai/arch: amd64, arm64（Thor／Spark 用同一個多架構映像；Orin 需 JetPack 版映像）
+  edge-ai/license: BSD-3-Clause（程式）＋ NVIDIA 映像 EULA
+  edge-ai/chart-kind: edge-ai-authored

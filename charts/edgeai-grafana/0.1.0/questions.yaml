@@ -1,0 +1,17 @@
+# Rancher 安裝表單（Apps → Charts → Grafana（AGPL））
+questions:
+- variable: grafana.admin.existingSecret
+  label: 管理者 Secret
+  description: 含 admin-user、admin-password；空白則上游隨機產生
+  type: string
+  group: 認證
+- variable: grafana.persistence.enabled
+  label: 資料持久化（PVC）
+  type: boolean
+  default: false
+  group: 儲存
+- variable: grafana.ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路

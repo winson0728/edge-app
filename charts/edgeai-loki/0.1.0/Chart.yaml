@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-loki
+description: Loki 日誌（SingleBinary＋filesystem，單站 Hub）
+type: application
+version: 0.1.0
+appVersion: 3.6.20
+kubeVersion: '>=1.28.0-0'
+home: https://grafana.com/oss/loki/
+keywords:
+- edge-ai
+- pack-observe
+- Monitoring
+dependencies:
+- name: loki
+  version: 7.7.0
+  repository: https://grafana.github.io/helm-charts
+annotations:
+  catalog.cattle.io/display-name: Loki（AGPL）
+  catalog.cattle.io/certified: Observability
+  catalog.cattle.io/namespace: edgeai-observability
+  catalog.cattle.io/release-name: edgeai-loki
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Observability
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: AGPL-3.0
+  edge-ai/chart-kind: upstream-wrapper

@@ -1,0 +1,9 @@
+# OpenTelemetry Collector — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 上游 chart：opentelemetry-collector 0.182.0（https://open-telemetry.github.io/opentelemetry-helm-charts）。
+# 所有上游參數都放在 `opentelemetry-collector:` 底下，可用上游文件的任何參數覆寫。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+opentelemetry-collector:
+  mode: deployment
+  image:
+    repository: otel/opentelemetry-collector-k8s

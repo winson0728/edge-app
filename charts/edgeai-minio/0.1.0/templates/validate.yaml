@@ -1,0 +1,4 @@
+{{- /* 安裝前檢查：必填的 Secret 名稱等 */ -}}
+{{- if not (index .Values "minio" "existingSecret") }}
+{{- fail "minio.existingSecret 必填（含 rootUser／rootPassword 的 Secret）" }}
+{{- end }}

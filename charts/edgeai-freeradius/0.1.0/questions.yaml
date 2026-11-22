@@ -1,0 +1,28 @@
+# Rancher 安裝表單（Apps → Charts → FreeRADIUS）
+questions:
+- variable: clients.existingSecret
+  label: NAS clients Secret 名稱
+  description: 含 clients.conf 鍵的 Secret（AP／Switch 的 RADIUS 共用密鑰），需先建立
+  type: string
+  required: true
+  group: 認證
+- variable: components.freeradius.image.tag
+  label: 映像 tag
+  type: string
+  default: 3.2.10
+  group: 映像
+- variable: components.freeradius.service.type
+  label: Service 類型
+  description: AP／Switch 在叢集外時用 NodePort 或 LoadBalancer
+  type: enum
+  options:
+  - ClusterIP
+  - NodePort
+  - LoadBalancer
+  default: ClusterIP
+  group: 網路
+- variable: networkPolicy.enabled
+  label: 啟用 NetworkPolicy
+  type: boolean
+  default: true
+  group: 網路

@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-cloudnative-pg
+description: CloudNativePG（PostgreSQL operator；自研模組、Keycloak、MLflow 的資料庫）
+type: application
+version: 0.1.0
+appVersion: 1.30.2
+kubeVersion: '>=1.28.0-0'
+home: https://cloudnative-pg.io
+keywords:
+- edge-ai
+- pack-platform
+- Database
+dependencies:
+- name: cloudnative-pg
+  version: 0.29.2
+  repository: https://cloudnative-pg.github.io/charts
+annotations:
+  catalog.cattle.io/display-name: CloudNativePG Operator
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-cloudnative-pg
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub、Node
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

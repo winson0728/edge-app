@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-step-ca
+description: smallstep step-ca（私有 CA、ACME／EST，裝置身分與 mTLS）
+type: application
+version: 0.1.0
+appVersion: 0.30.2
+kubeVersion: '>=1.28.0-0'
+home: https://smallstep.com/docs/step-ca/
+keywords:
+- edge-ai
+- pack-access
+- Security
+dependencies:
+- name: step-certificates
+  version: 1.30.1
+  repository: https://smallstep.github.io/helm-charts
+annotations:
+  catalog.cattle.io/display-name: step-ca 私有 CA
+  catalog.cattle.io/certified: Access & NAC
+  catalog.cattle.io/namespace: edgeai-access
+  catalog.cattle.io/release-name: edgeai-step-ca
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Access & NAC
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

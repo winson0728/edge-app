@@ -1,0 +1,5 @@
+Eclipse Mosquitto 已安裝（release {{ .Release.Name }}，namespace {{ .Release.Namespace }}）。
+Pack：IoT/OT；層級：Hub、Node、Gateway；架構：amd64, arm64。
+{{- range $name, $c := .Values.components }}{{ if and $c.enabled $c.service $c.service.enabled }}
+- {{ include "eai.componentName" (list $ $name $c) }}：{{ range $c.service.ports }}{{ .name }}={{ .port }}/{{ default "TCP" .protocol }} {{ end }}{{ end }}{{ end }}
+授權：EPL-2.0 / EDL-1.0（商用打包風險：低）。說明見 chart README。

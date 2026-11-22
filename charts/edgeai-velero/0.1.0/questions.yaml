@@ -1,0 +1,12 @@
+# Rancher 安裝表單（Apps → Charts → Velero）
+questions:
+- variable: velero.credentials.existingSecret
+  label: S3 憑證 Secret
+  description: 含 cloud 鍵（AWS credentials 檔格式）
+  type: string
+  group: 儲存位置
+- variable: velero.deployNodeAgent
+  label: 部署 node-agent（檔案層備份）
+  type: boolean
+  default: false
+  group: 備份

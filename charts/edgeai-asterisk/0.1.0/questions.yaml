@@ -1,0 +1,33 @@
+# Rancher 安裝表單（Apps → Charts → Asterisk（IP PBX））
+questions:
+- variable: components.asterisk.image.repository
+  label: 映像位置
+  description: 上游沒有官方映像，請填自建映像（例如 harbor.local/edgeai/asterisk）
+  type: string
+  required: true
+  group: 映像
+- variable: components.asterisk.image.tag
+  label: 映像 tag
+  type: string
+  default: '22'
+  group: 映像
+- variable: ari.existingSecret
+  label: ARI 設定 Secret
+  description: 含 ari.conf（ARI 帳密），ptt-gateway 需要
+  type: string
+  group: 設定
+- variable: pjsip.existingSecret
+  label: PJSIP 設定 Secret
+  description: 含 pjsip.conf（分機與密碼）
+  type: string
+  group: 設定
+- variable: rtp.start
+  label: RTP 起始埠
+  type: int
+  default: 10000
+  group: 網路
+- variable: rtp.end
+  label: RTP 結束埠
+  type: int
+  default: 10199
+  group: 網路

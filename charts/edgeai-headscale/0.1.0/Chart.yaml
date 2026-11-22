@@ -1,0 +1,25 @@
+apiVersion: v2
+name: edgeai-headscale
+description: Headscale（自架 Tailscale 控制面，站點 Mesh／行動指揮車）
+type: application
+version: 0.1.0
+appVersion: 0.29.7
+kubeVersion: '>=1.28.0-0'
+home: https://headscale.net
+keywords:
+- edge-ai
+- pack-access
+- Networking
+annotations:
+  catalog.cattle.io/display-name: Headscale
+  catalog.cattle.io/certified: Access & NAC
+  catalog.cattle.io/namespace: edgeai-access
+  catalog.cattle.io/release-name: edgeai-headscale
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Access & NAC
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: BSD-3-Clause
+  edge-ai/chart-kind: edge-ai-authored

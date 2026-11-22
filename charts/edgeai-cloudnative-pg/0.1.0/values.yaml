@@ -1,0 +1,6 @@
+# CloudNativePG Operator — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 上游 chart：cloudnative-pg 0.29.2（https://cloudnative-pg.github.io/charts）。
+# 所有上游參數都放在 `cloudnative-pg:` 底下，可用上游文件的任何參數覆寫。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+cloudnative-pg: {}

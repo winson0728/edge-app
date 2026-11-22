@@ -1,0 +1,17 @@
+# Rancher 安裝表單（Apps → Charts → step-ca 私有 CA）
+questions:
+- variable: step-certificates.ca.name
+  label: CA 名稱
+  type: string
+  default: Edge AI Private CA
+  group: CA
+- variable: step-certificates.ca.db.persistent
+  label: 資料持久化（PVC）
+  type: boolean
+  default: true
+  group: 儲存
+- variable: step-certificates.ca.db.size
+  label: PVC 大小
+  type: string
+  default: 2Gi
+  group: 儲存

@@ -1,0 +1,25 @@
+apiVersion: v2
+name: edgeai-thingsboard
+description: ThingsBoard CE 單機版（內建 PostgreSQL 的 tb-postgres 映像，IoT 儀表板）
+type: application
+version: 0.1.0
+appVersion: 4.2.1
+kubeVersion: '>=1.28.0-0'
+home: https://thingsboard.io
+keywords:
+- edge-ai
+- pack-iot
+- Applications
+annotations:
+  catalog.cattle.io/display-name: ThingsBoard CE（選配）
+  catalog.cattle.io/certified: IoT/OT
+  catalog.cattle.io/namespace: edgeai-iot
+  catalog.cattle.io/release-name: edgeai-thingsboard
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: IoT/OT
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: edge-ai-authored

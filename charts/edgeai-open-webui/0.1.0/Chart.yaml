@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-open-webui
+description: Open WebUI（RAG／Assistant 前端，接 vLLM 或 LiteLLM）
+type: application
+version: 0.1.0
+appVersion: 0.13.4
+kubeVersion: '>=1.28.0-0'
+home: https://openwebui.com
+keywords:
+- edge-ai
+- pack-rag
+- Applications
+dependencies:
+- name: open-webui
+  version: 18.4.0
+  repository: https://helm.openwebui.com/
+annotations:
+  catalog.cattle.io/display-name: Open WebUI
+  catalog.cattle.io/certified: RAG
+  catalog.cattle.io/namespace: edgeai-rag
+  catalog.cattle.io/release-name: edgeai-open-webui
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: RAG
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Open WebUI License（BSD-3 衍生＋品牌條款，v0.6+）
+  edge-ai/chart-kind: upstream-wrapper

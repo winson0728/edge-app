@@ -1,0 +1,11 @@
+# Rancher 安裝表單（Apps → Charts → OpenTelemetry Collector）
+questions:
+- variable: opentelemetry-collector.mode
+  label: 部署模式
+  type: enum
+  options:
+  - deployment
+  - daemonset
+  - statefulset
+  default: deployment
+  group: Collector

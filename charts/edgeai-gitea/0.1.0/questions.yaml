@@ -1,0 +1,18 @@
+# Rancher 安裝表單（Apps → Charts → Gitea）
+questions:
+- variable: gitea.gitea.admin.existingSecret
+  label: 管理者 Secret
+  description: 含 username、password
+  type: string
+  required: true
+  group: 管理者
+- variable: gitea.persistence.size
+  label: PVC 大小
+  type: string
+  default: 10Gi
+  group: 儲存
+- variable: gitea.ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路

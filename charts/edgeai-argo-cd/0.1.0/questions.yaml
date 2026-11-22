@@ -1,0 +1,16 @@
+# Rancher 安裝表單（Apps → Charts → Argo CD（選配））
+questions:
+- variable: argo-cd.server.service.type
+  label: Service 類型
+  type: enum
+  options:
+  - ClusterIP
+  - NodePort
+  - LoadBalancer
+  default: ClusterIP
+  group: 網路
+- variable: argo-cd.server.ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路

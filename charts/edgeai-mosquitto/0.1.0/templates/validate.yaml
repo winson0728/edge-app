@@ -1,0 +1,3 @@
+{{- if and (not .Values.mqtt.allowAnonymous) (not .Values.mqtt.passwordSecret) (not .Values.mqtt.dynamicSecurity) }}
+{{- fail "未開匿名時必須提供 mqtt.passwordSecret（含 passwd 鍵，mosquitto_passwd 產生）或開 mqtt.dynamicSecurity" }}
+{{- end }}

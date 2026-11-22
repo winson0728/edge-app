@@ -1,0 +1,192 @@
+{{- /* 每個 components.<name> 產生一個 Deployment／StatefulSet／Job。 */ -}}
+{{- range $name, $c := .Values.components }}
+{{- if $c.enabled }}
+{{- $kind := default "Deployment" $c.kind }}
+{{- $full := include "eai.componentName" (list $ $name $c) }}
+---
+{{- if eq $kind "Job" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $full }}
+  labels:
+    {{- include "eai.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ default 6 $c.backoffLimit }}
+  template:
+{{- else }}
+apiVersion: apps/v1
+kind: {{ $kind }}
+metadata:
+  name: {{ $full }}
+  labels:
+    {{- include "eai.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ default 1 $c.replicas }}
+  {{- if eq $kind "StatefulSet" }}
+  serviceName: {{ $full }}
+  {{- else }}
+  strategy:
+    type: {{ ternary "Recreate" "RollingUpdate" (or (and $c.persistence $c.persistence.enabled) (default false $c.hostNetwork)) }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "eai.selectorLabels" (list $ $name) | nindent 6 }}
+  template:
+{{- end }}
+    metadata:
+      labels:
+        {{- include "eai.selectorLabels" (list $ $name) | nindent 8 }}
+      annotations:
+        {{- if $c.config }}
+        checksum/config: {{ toYaml $c.config | sha256sum }}
+        {{- end }}
+        {{- with $c.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if eq $kind "Job" }}
+      restartPolicy: OnFailure
+      {{- end }}
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if $c.hostNetwork }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- end }}
+      {{- with $c.runtimeClassName }}
+      runtimeClassName: {{ . }}
+      {{- end }}
+      {{- with (default $.Values.podSecurityContext $c.podSecurityContext) }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with (default $.Values.nodeSelector $c.nodeSelector) }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with (default $.Values.tolerations $c.tolerations) }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with (default $.Values.affinity $c.affinity) }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.initContainers }}
+      initContainers:
+        {{- tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "eai.image" (list $c $name) | quote }}
+          imagePullPolicy: {{ default "IfNotPresent" $c.image.pullPolicy }}
+          {{- with $c.command }}
+          command:
+            {{- tpl (toYaml .) $ | nindent 12 }}
+          {{- end }}
+          {{- with $c.args }}
+          args:
+            {{- tpl (toYaml .) $ | nindent 12 }}
+          {{- end }}
+          {{- with $c.env }}
+          env:
+            {{- tpl (toYaml .) $ | nindent 12 }}
+          {{- end }}
+          {{- with $c.envFrom }}
+          envFrom:
+            {{- tpl (toYaml .) $ | nindent 12 }}
+          {{- end }}
+          {{- with $c.ports }}
+          ports:
+            {{- range . }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: {{ default "TCP" .protocol }}
+            {{- end }}
+          {{- end }}
+          {{- with $c.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $c.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $c.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $c.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $c.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- if $c.config }}
+            {{- range $file, $_ := $c.config.files }}
+            - name: config
+              mountPath: {{ printf "%s/%s" (trimSuffix "/" $c.config.mountPath) $file }}
+              subPath: {{ $file }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
+            {{- range $i, $s := $c.secretMounts }}
+            {{- if tpl (toString $s.secretName) $ }}
+            - name: {{ printf "secret-%d" $i }}
+              mountPath: {{ $s.mountPath }}
+              {{- with $s.subPath }}
+              subPath: {{ . }}
+              {{- end }}
+              readOnly: true
+            {{- end }}
+            {{- end }}
+            {{- if $c.persistence }}
+            - name: data
+              mountPath: {{ $c.persistence.mountPath }}
+            {{- end }}
+            {{- with $c.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        {{- if $c.config }}
+        - name: config
+          configMap:
+            name: {{ $full }}
+        {{- end }}
+        {{- range $i, $s := $c.secretMounts }}
+        {{- $sn := tpl (toString $s.secretName) $ }}
+        {{- if $sn }}
+        - name: {{ printf "secret-%d" $i }}
+          secret:
+            secretName: {{ $sn }}
+            {{- with $s.defaultMode }}
+            defaultMode: {{ . }}
+            {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if $c.persistence }}
+        - name: data
+          {{- if $c.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ default $full $c.persistence.existingClaim }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+        {{- with $c.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}
+{{- end }}

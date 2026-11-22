@@ -1,0 +1,9 @@
+# SeaweedFS（S3） — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 上游 chart：seaweedfs 4.54.0（https://seaweedfs.github.io/seaweedfs/helm）。
+# 所有上游參數都放在 `seaweedfs:` 底下，可用上游文件的任何參數覆寫。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+seaweedfs:
+  filer:
+    s3:
+      enabled: true

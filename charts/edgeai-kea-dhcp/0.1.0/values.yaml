@@ -1,0 +1,79 @@
+# Kea DHCP — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+nameOverride: ''
+fullnameOverride: ''
+imagePullSecrets: []
+podSecurityContext: {}
+nodeSelector:
+  kubernetes.io/os: linux
+  kubernetes.io/arch: amd64
+tolerations: []
+affinity: {}
+networkPolicy:
+  enabled: false
+  allowedPorts: []
+  allowFrom: []
+ingress:
+  enabled: false
+  className: ''
+  host: ''
+  tlsSecret: ''
+  annotations: {}
+  component: ''
+  servicePort: ''
+dhcp:
+  interface: eth0
+  subnet: 192.0.2.0/24
+  poolStart: 192.0.2.100
+  poolEnd: 192.0.2.200
+  router: 192.0.2.1
+  dnsServers: 192.0.2.1
+  validLifetime: 4000
+components:
+  kea:
+    enabled: true
+    hostNetwork: true
+    image:
+      repository: docker.cloudsmith.io/isc/docker/kea-dhcp4
+      tag: 3.0.5
+      pullPolicy: IfNotPresent
+    securityContext:
+      capabilities:
+        add:
+        - NET_ADMIN
+        - NET_RAW
+        - NET_BIND_SERVICE
+    config:
+      mountPath: /etc/kea
+      files:
+        kea-dhcp4.conf: |
+          {
+            "Dhcp4": {
+              "interfaces-config": { "interfaces": [ {{ .Values.dhcp.interface | quote }} ] },
+              "lease-database": { "type": "memfile", "persist": true, "name": "/var/lib/kea/dhcp4.leases" },
+              "valid-lifetime": {{ .Values.dhcp.validLifetime }},
+              "subnet4": [
+                {
+                  "id": 1,
+                  "subnet": {{ .Values.dhcp.subnet | quote }},
+                  "pools": [ { "pool": "{{ .Values.dhcp.poolStart }} - {{ .Values.dhcp.poolEnd }}" } ],
+                  "option-data": [
+                    { "name": "routers", "data": {{ .Values.dhcp.router | quote }} },
+                    { "name": "domain-name-servers", "data": {{ .Values.dhcp.dnsServers | quote }} }
+                  ]
+                }
+              ],
+              "loggers": [ { "name": "kea-dhcp4", "output-options": [ { "output": "stdout" } ], "severity": "INFO" } ]
+            }
+          }
+    persistence:
+      enabled: false
+      mountPath: /var/lib/kea
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi

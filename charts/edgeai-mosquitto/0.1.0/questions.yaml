@@ -1,0 +1,38 @@
+# Rancher 安裝表單（Apps → Charts → Eclipse Mosquitto）
+questions:
+- variable: mqtt.passwordSecret
+  label: 帳密檔 Secret
+  description: 含 passwd 鍵（mosquitto_passwd 產生的雜湊檔）
+  type: string
+  group: 認證
+- variable: mqtt.allowAnonymous
+  label: 允許匿名
+  description: 只建議 Lab 用
+  type: boolean
+  default: false
+  group: 認證
+- variable: mqtt.dynamicSecurity
+  label: 啟用 Dynamic Security
+  description: access-policy-service 下發 ACL 用
+  type: boolean
+  default: false
+  group: 認證
+- variable: mqtt.websockets
+  label: 開 WebSocket（9001）
+  type: boolean
+  default: false
+  group: 網路
+- variable: components.mosquitto.service.type
+  label: Service 類型
+  type: enum
+  options:
+  - ClusterIP
+  - NodePort
+  - LoadBalancer
+  default: ClusterIP
+  group: 網路
+- variable: components.mosquitto.persistence.enabled
+  label: 資料持久化（PVC）
+  type: boolean
+  default: false
+  group: 儲存

@@ -1,0 +1,32 @@
+{{- /* 預設：同 release 內互通；對外只開 networkPolicy.allowedPorts 列出的埠（來源可用 allowFrom 限縮）。 */ -}}
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "eai.fullname" . }}
+  labels:
+    {{- include "eai.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+    {{- if .Values.networkPolicy.allowedPorts }}
+    - ports:
+        {{- range .Values.networkPolicy.allowedPorts }}
+        - port: {{ .port }}
+          protocol: {{ default "TCP" .protocol }}
+        {{- end }}
+      {{- with .Values.networkPolicy.allowFrom }}
+      from:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- end }}
+{{- end }}

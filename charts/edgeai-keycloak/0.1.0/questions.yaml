@@ -1,0 +1,34 @@
+# Rancher 安裝表單（Apps → Charts → Keycloak）
+questions:
+- variable: keycloakx.adminExistingSecret
+  label: 管理者 Secret
+  description: 含 username、password 兩個鍵
+  type: string
+  required: true
+  group: 管理者
+- variable: keycloakx.database.hostname
+  label: PostgreSQL 主機
+  type: string
+  required: true
+  group: 資料庫
+- variable: keycloakx.database.database
+  label: 資料庫名稱
+  type: string
+  default: keycloak
+  group: 資料庫
+- variable: keycloakx.database.username
+  label: 資料庫帳號
+  type: string
+  default: keycloak
+  group: 資料庫
+- variable: keycloakx.database.existingSecret
+  label: 資料庫密碼 Secret
+  description: 鍵名 password
+  type: string
+  required: true
+  group: 資料庫
+- variable: keycloakx.ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路

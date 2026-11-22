@@ -1,0 +1,88 @@
+# Triton Inference Server — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+nameOverride: ''
+fullnameOverride: ''
+imagePullSecrets: []
+podSecurityContext: {}
+nodeSelector:
+  kubernetes.io/os: linux
+tolerations: []
+affinity: {}
+networkPolicy:
+  enabled: true
+  allowedPorts: []
+  allowFrom: []
+ingress:
+  enabled: false
+  className: ''
+  host: ''
+  tlsSecret: ''
+  annotations: {}
+  component: ''
+  servicePort: ''
+triton:
+  modelRepository: /models
+  extraArgs:
+  - --model-control-mode=poll
+  - --repository-poll-secs=30
+components:
+  triton:
+    enabled: true
+    runtimeClassName: nvidia
+    image:
+      repository: nvcr.io/nvidia/tritonserver
+      tag: 26.11-py3
+      pullPolicy: IfNotPresent
+    command:
+    - tritonserver
+    args:
+    - --model-repository={{ .Values.triton.modelRepository }}
+    - '{{ join " " .Values.triton.extraArgs }}'
+    ports:
+    - name: http
+      containerPort: 8000
+    - name: grpc
+      containerPort: 8001
+    - name: metrics
+      containerPort: 8002
+    service:
+      enabled: true
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8000
+      - name: grpc
+        port: 8001
+      - name: metrics
+        port: 8002
+    readinessProbe:
+      httpGet:
+        path: /v2/health/ready
+        port: http
+      periodSeconds: 10
+    startupProbe:
+      httpGet:
+        path: /v2/health/live
+        port: http
+      periodSeconds: 10
+      failureThreshold: 60
+    persistence:
+      enabled: true
+      mountPath: /models
+      size: 20Gi
+    extraVolumes:
+    - name: dshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 1Gi
+    extraVolumeMounts:
+    - name: dshm
+      mountPath: /dev/shm
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        memory: 16Gi
+        nvidia.com/gpu: 1

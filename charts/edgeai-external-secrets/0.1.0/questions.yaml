@@ -1,0 +1,7 @@
+# Rancher 安裝表單（Apps → Charts → External Secrets Operator）
+questions:
+- variable: external-secrets.installCRDs
+  label: 安裝 CRD
+  type: boolean
+  default: true
+  group: Operator

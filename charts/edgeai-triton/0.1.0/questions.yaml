@@ -1,0 +1,29 @@
+# Rancher 安裝表單（Apps → Charts → Triton Inference Server）
+questions:
+- variable: components.triton.image.tag
+  label: 映像 tag
+  description: x86／Thor／Spark：26.11-py3；Orin（JetPack 6）請改 JetPack 版映像
+  type: string
+  default: 26.11-py3
+  group: 映像
+- variable: components.triton.runtimeClassName
+  label: RuntimeClass
+  type: string
+  default: nvidia
+  group: GPU
+- variable: triton.modelRepository
+  label: 模型庫位置
+  description: /models（PVC）或 s3://...
+  type: string
+  default: /models
+  group: 模型
+- variable: components.triton.persistence.existingClaim
+  label: 既有模型 PVC
+  description: 空白則新建 PVC
+  type: pvc
+  group: 模型
+- variable: components.triton.persistence.size
+  label: 新建 PVC 大小
+  type: string
+  default: 20Gi
+  group: 模型

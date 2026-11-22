@@ -1,0 +1,7 @@
+# Rancher 安裝表單（Apps → Charts → CloudNativePG Operator）
+questions:
+- variable: cloudnative-pg.crds.create
+  label: 安裝 CRD
+  type: boolean
+  default: true
+  group: Operator

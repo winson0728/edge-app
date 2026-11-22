@@ -1,0 +1,3 @@
+# helm lint／template 測試值：只放 Secret 名稱，不含任何密碼
+litellm-helm:
+  masterkeySecretName: litellm-masterkey

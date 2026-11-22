@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-minio
+description: MinIO 物件儲存（選配；AGPL 授權風險）
+type: application
+version: 0.1.0
+appVersion: RELEASE.2024-12-18T13-15-44Z
+kubeVersion: '>=1.28.0-0'
+home: https://min.io
+keywords:
+- edge-ai
+- pack-platform
+- Storage
+dependencies:
+- name: minio
+  version: 5.4.0
+  repository: https://charts.min.io/
+annotations:
+  catalog.cattle.io/display-name: MinIO（選配，AGPL）
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-minio
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: AGPL-3.0
+  edge-ai/chart-kind: upstream-wrapper

@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-trivy-operator
+description: Trivy Operator（叢集內映像弱點／組態掃描，CVE SLA 依據）
+type: application
+version: 0.1.0
+appVersion: 0.36.1
+kubeVersion: '>=1.28.0-0'
+home: https://aquasecurity.github.io/trivy-operator/
+keywords:
+- edge-ai
+- pack-security
+- Security
+dependencies:
+- name: trivy-operator
+  version: 0.38.1
+  repository: https://aquasecurity.github.io/helm-charts/
+annotations:
+  catalog.cattle.io/display-name: Trivy Operator
+  catalog.cattle.io/certified: Security
+  catalog.cattle.io/namespace: edgeai-security
+  catalog.cattle.io/release-name: edgeai-trivy-operator
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Security
+  edge-ai/tier: Hub、Node
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

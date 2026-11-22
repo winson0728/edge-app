@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-litellm
+description: LiteLLM（統一 LLM 閘道、金鑰／用量與 AI Agent 稽核日誌）
+type: application
+version: 0.1.0
+appVersion: 1.110.2
+kubeVersion: '>=1.28.0-0'
+home: https://docs.litellm.ai
+keywords:
+- edge-ai
+- pack-rag
+- Applications
+dependencies:
+- name: litellm-helm
+  version: 1.110.2
+  repository: oci://ghcr.io/berriai
+annotations:
+  catalog.cattle.io/display-name: LiteLLM Proxy
+  catalog.cattle.io/certified: RAG
+  catalog.cattle.io/namespace: edgeai-rag
+  catalog.cattle.io/release-name: edgeai-litellm
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: RAG
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: MIT（enterprise/ 目錄除外）
+  edge-ai/chart-kind: upstream-wrapper

@@ -1,0 +1,21 @@
+# Rancher 安裝表單（Apps → Charts → ThingsBoard CE（選配））
+questions:
+- variable: components.thingsboard.persistence.enabled
+  label: 資料持久化（PVC）
+  type: boolean
+  default: true
+  group: 儲存
+- variable: components.thingsboard.persistence.size
+  label: PVC 大小
+  type: string
+  default: 10Gi
+  group: 儲存
+- variable: components.thingsboard.service.type
+  label: Service 類型
+  type: enum
+  options:
+  - ClusterIP
+  - NodePort
+  - LoadBalancer
+  default: ClusterIP
+  group: 網路

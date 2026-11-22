@@ -1,0 +1,10 @@
+{{- /* 安裝前檢查：必填的 Secret 名稱等 */ -}}
+{{- if not (index .Values "keycloakx" "adminExistingSecret") }}
+{{- fail "keycloakx.adminExistingSecret 必填（含 username／password 的 Secret）" }}
+{{- end }}
+{{- if not (index .Values "keycloakx" "database" "hostname") }}
+{{- fail "keycloakx.database.hostname 必填（PostgreSQL，例如 edgeai-cloudnative-pg 建的叢集）" }}
+{{- end }}
+{{- if not (index .Values "keycloakx" "database" "existingSecret") }}
+{{- fail "keycloakx.database.existingSecret 必填" }}
+{{- end }}

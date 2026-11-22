@@ -1,0 +1,29 @@
+# Gitea — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 上游 chart：gitea 12.7.0（https://dl.gitea.com/charts/）。
+# 所有上游參數都放在 `gitea:` 底下，可用上游文件的任何參數覆寫。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+gitea:
+  postgresql-ha:
+    enabled: false
+  postgresql:
+    enabled: false
+  valkey-cluster:
+    enabled: false
+  valkey:
+    enabled: false
+  gitea:
+    admin:
+      existingSecret: ''
+    config:
+      database:
+        DB_TYPE: sqlite3
+      session:
+        PROVIDER: memory
+      cache:
+        ADAPTER: memory
+      queue:
+        TYPE: level
+  persistence:
+    enabled: true
+    size: 10Gi

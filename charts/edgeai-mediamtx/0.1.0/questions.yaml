@@ -1,0 +1,31 @@
+# Rancher 安裝表單（Apps → Charts → MediaMTX）
+questions:
+- variable: components.mediamtx.service.type
+  label: Service 類型
+  description: Camera／觀看端在叢集外時用 NodePort 或 LoadBalancer
+  type: enum
+  options:
+  - ClusterIP
+  - NodePort
+  - LoadBalancer
+  default: ClusterIP
+  group: 網路
+- variable: recording.enabled
+  label: 環形錄影（Evidence 用）
+  type: boolean
+  default: false
+  group: 錄影
+  show_subquestion_if: true
+  subquestions:
+  - variable: recording.deleteAfter
+    label: 保留時間
+    type: string
+    default: 24h
+  - variable: components.mediamtx.persistence.enabled
+    label: 錄影存 PVC
+    type: boolean
+    default: false
+  - variable: components.mediamtx.persistence.size
+    label: PVC 大小
+    type: string
+    default: 50Gi

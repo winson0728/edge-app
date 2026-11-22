@@ -1,0 +1,18 @@
+# Rancher 安裝表單（Apps → Charts → CVAT）
+questions:
+- variable: cvat.analytics.enabled
+  label: 啟用 analytics（ClickHouse＋Grafana＋Vector）
+  type: boolean
+  default: false
+  group: 元件
+- variable: cvat.ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路
+  show_subquestion_if: true
+  subquestions:
+  - variable: cvat.ingress.hostname
+    label: 主機名稱
+    type: hostname
+    default: cvat.local

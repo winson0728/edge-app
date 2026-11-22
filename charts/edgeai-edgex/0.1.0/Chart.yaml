@@ -1,0 +1,25 @@
+apiVersion: v2
+name: edgeai-edgex
+description: EdgeX Foundry 4.0 core 子集（keeper、metadata、data、command、UI，no-secty 模式）
+type: application
+version: 0.1.0
+appVersion: 4.0.2
+kubeVersion: '>=1.28.0-0'
+home: https://www.edgexfoundry.org
+keywords:
+- edge-ai
+- pack-iot
+- Applications
+annotations:
+  catalog.cattle.io/display-name: EdgeX Foundry（core）
+  catalog.cattle.io/certified: IoT/OT
+  catalog.cattle.io/namespace: edgeai-iot
+  catalog.cattle.io/release-name: edgeai-edgex
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: IoT/OT
+  edge-ai/tier: Node、Gateway
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: edge-ai-authored

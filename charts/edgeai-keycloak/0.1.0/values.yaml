@@ -1,0 +1,30 @@
+# Keycloak — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 上游 chart：keycloakx 7.4.0（https://codecentric.github.io/helm-charts）。
+# 所有上游參數都放在 `keycloakx:` 底下，可用上游文件的任何參數覆寫。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+keycloakx:
+  adminExistingSecret: ''
+  command:
+  - /opt/keycloak/bin/kc.sh
+  - start
+  - --http-port=8080
+  - --hostname-strict=false
+  - --http-enabled=true
+  extraEnv: |
+    - name: KC_BOOTSTRAP_ADMIN_USERNAME
+      valueFrom: {secretKeyRef: {name: {{ .Values.adminExistingSecret | quote }}, key: username}}
+    - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+      valueFrom: {secretKeyRef: {name: {{ .Values.adminExistingSecret | quote }}, key: password}}
+    - name: KC_HEALTH_ENABLED
+      value: "true"
+  proxy:
+    mode: xforwarded
+  database:
+    vendor: postgres
+    hostname: ''
+    port: 5432
+    database: keycloak
+    username: keycloak
+    existingSecret: ''
+    existingSecretKey: password

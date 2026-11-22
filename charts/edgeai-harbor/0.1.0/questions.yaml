@@ -1,0 +1,29 @@
+# Rancher 安裝表單（Apps → Charts → Harbor）
+questions:
+- variable: harbor.existingSecretAdminPassword
+  label: 管理者密碼 Secret
+  description: 鍵名 HARBOR_ADMIN_PASSWORD
+  type: string
+  required: true
+  group: 認證
+- variable: harbor.externalURL
+  label: 對外 URL
+  type: string
+  required: true
+  default: https://harbor.example.com
+  group: 網路
+- variable: harbor.expose.type
+  label: 對外方式
+  type: enum
+  options:
+  - clusterIP
+  - nodePort
+  - ingress
+  - loadBalancer
+  default: clusterIP
+  group: 網路
+- variable: harbor.persistence.enabled
+  label: 資料持久化（PVC）
+  type: boolean
+  default: true
+  group: 儲存

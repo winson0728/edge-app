@@ -1,0 +1,15 @@
+# VictoriaMetrics＋VictoriaLogs — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+victoria-metrics-single:
+  enabled: true
+  server:
+    persistentVolume:
+      enabled: true
+      size: 20Gi
+victoria-logs-single:
+  enabled: true
+  server:
+    persistentVolume:
+      enabled: true
+      size: 20Gi

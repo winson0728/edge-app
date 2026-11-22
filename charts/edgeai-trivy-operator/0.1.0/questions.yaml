@@ -1,0 +1,12 @@
+# Rancher 安裝表單（Apps → Charts → Trivy Operator）
+questions:
+- variable: trivy-operator.operator.scanJobsConcurrentLimit
+  label: 同時掃描 Job 數
+  type: int
+  default: 1
+  group: 掃描
+- variable: trivy-operator.trivy.ignoreUnfixed
+  label: 忽略尚無修補的 CVE
+  type: boolean
+  default: true
+  group: 掃描

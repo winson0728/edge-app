@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-seaweedfs
+description: SeaweedFS 物件儲存（S3 相容，MinIO 的 Apache-2.0 替代，平台預設）
+type: application
+version: 0.1.0
+appVersion: '4.54'
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/seaweedfs/seaweedfs
+keywords:
+- edge-ai
+- pack-platform
+- Storage
+dependencies:
+- name: seaweedfs
+  version: 4.54.0
+  repository: https://seaweedfs.github.io/seaweedfs/helm
+annotations:
+  catalog.cattle.io/display-name: SeaweedFS（S3）
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-seaweedfs
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

@@ -1,0 +1,4 @@
+LiteLLM Proxy 已安裝（release {{ .Release.Name }}，namespace {{ .Release.Namespace }}）。
+Pack：RAG；層級：Hub；架構：amd64, arm64。
+上游 chart：litellm-helm 1.110.2。
+授權：MIT（enterprise/ 目錄除外）（商用打包風險：低）。說明見 chart README。

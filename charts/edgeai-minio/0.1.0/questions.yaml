@@ -1,0 +1,13 @@
+# Rancher 安裝表單（Apps → Charts → MinIO（選配，AGPL））
+questions:
+- variable: minio.existingSecret
+  label: Root 帳密 Secret
+  description: 含 rootUser、rootPassword
+  type: string
+  required: true
+  group: 認證
+- variable: minio.persistence.size
+  label: PVC 大小
+  type: string
+  default: 50Gi
+  group: 儲存

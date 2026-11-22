@@ -1,0 +1,12 @@
+# Rancher 安裝表單（Apps → Charts → SeaweedFS（S3））
+questions:
+- variable: seaweedfs.filer.s3.enabled
+  label: 開 S3 Gateway
+  type: boolean
+  default: true
+  group: S3
+- variable: seaweedfs.volume.replicas
+  label: Volume server 數
+  type: int
+  default: 1
+  group: 規模

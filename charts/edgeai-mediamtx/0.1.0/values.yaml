@@ -1,0 +1,152 @@
+# MediaMTX — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+nameOverride: ''
+fullnameOverride: ''
+imagePullSecrets: []
+podSecurityContext: {}
+nodeSelector:
+  kubernetes.io/os: linux
+tolerations: []
+affinity: {}
+networkPolicy:
+  enabled: true
+  allowedPorts:
+  - port: 8554
+  - port: 8000
+    protocol: UDP
+  - port: 8001
+    protocol: UDP
+  - port: 1935
+  - port: 8888
+  - port: 8889
+  - port: 8189
+    protocol: UDP
+  - port: 8890
+    protocol: UDP
+  allowFrom: []
+ingress:
+  enabled: false
+  className: ''
+  host: ''
+  tlsSecret: ''
+  annotations: {}
+  component: ''
+  servicePort: ''
+components:
+  mediamtx:
+    enabled: true
+    image:
+      repository: docker.io/bluenviron/mediamtx
+      tag: 1.21.4
+      pullPolicy: IfNotPresent
+    ports:
+    - name: rtsp
+      containerPort: 8554
+    - name: rtp
+      containerPort: 8000
+      protocol: UDP
+    - name: rtcp
+      containerPort: 8001
+      protocol: UDP
+    - name: rtmp
+      containerPort: 1935
+    - name: hls
+      containerPort: 8888
+    - name: webrtc
+      containerPort: 8889
+    - name: webrtc-udp
+      containerPort: 8189
+      protocol: UDP
+    - name: srt
+      containerPort: 8890
+      protocol: UDP
+    - name: api
+      containerPort: 9997
+    - name: metrics
+      containerPort: 9998
+    service:
+      enabled: true
+      type: ClusterIP
+      ports:
+      - name: rtsp
+        port: 8554
+      - name: rtp
+        port: 8000
+        protocol: UDP
+      - name: rtcp
+        port: 8001
+        protocol: UDP
+      - name: rtmp
+        port: 1935
+      - name: hls
+        port: 8888
+      - name: webrtc
+        port: 8889
+      - name: webrtc-udp
+        port: 8189
+        protocol: UDP
+      - name: srt
+        port: 8890
+        protocol: UDP
+      - name: api
+        port: 9997
+      - name: metrics
+        port: 9998
+    readinessProbe:
+      tcpSocket:
+        port: rtsp
+      periodSeconds: 10
+    config:
+      mountPath: /
+      files:
+        mediamtx.yml: |
+          logLevel: info
+          api: yes
+          apiAddress: :9997
+          metrics: yes
+          metricsAddress: :9998
+          rtspAddress: :8554
+          rtpAddress: :8000
+          rtcpAddress: :8001
+          rtmpAddress: :1935
+          hlsAddress: :8888
+          webrtcAddress: :8889
+          webrtcLocalUDPAddress: :8189
+          srtAddress: :8890
+          authInternalUsers:
+            - user: any
+              pass:
+              ips: []
+              permissions:
+                - action: publish
+                - action: read
+                - action: playback
+            - user: any
+              pass:
+              ips: {{ toJson .Values.apiAllowedCIDRs }}
+              permissions:
+                - action: api
+                - action: metrics
+          pathDefaults:
+            record: {{ .Values.recording.enabled }}
+            recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+            recordDeleteAfter: {{ .Values.recording.deleteAfter }}
+          paths:
+            all_others:
+    persistence:
+      enabled: false
+      mountPath: /recordings
+      size: 50Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        memory: 1Gi
+apiAllowedCIDRs:
+- 127.0.0.1/32
+- 10.0.0.0/8
+recording:
+  enabled: false
+  deleteAfter: 24h

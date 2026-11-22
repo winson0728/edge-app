@@ -1,0 +1,3 @@
+{{- if not .Values.clients.existingSecret }}
+{{- fail "clients.existingSecret 必填：請先建立含 clients.conf 的 Secret（NAS 共用密鑰），見 README" }}
+{{- end }}

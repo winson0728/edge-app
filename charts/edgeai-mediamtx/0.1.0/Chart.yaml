@@ -1,0 +1,25 @@
+apiVersion: v2
+name: edgeai-mediamtx
+description: MediaMTX 串流伺服器（RTSP／RTMP／HLS／WebRTC／SRT，Camera 匯流與 Evidence 錄影）
+type: application
+version: 0.1.0
+appVersion: 1.21.4
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/bluenviron/mediamtx
+keywords:
+- edge-ai
+- pack-vision
+- Applications
+annotations:
+  catalog.cattle.io/display-name: MediaMTX
+  catalog.cattle.io/certified: Vision
+  catalog.cattle.io/namespace: edgeai-vision
+  catalog.cattle.io/release-name: edgeai-mediamtx
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Vision
+  edge-ai/tier: Node、Gateway
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: MIT
+  edge-ai/chart-kind: edge-ai-authored

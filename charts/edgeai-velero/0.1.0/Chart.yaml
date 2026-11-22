@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-velero
+description: Velero 備份／還原（應用資料與 PV，上送 SeaweedFS／S3）
+type: application
+version: 0.1.0
+appVersion: 1.18.2
+kubeVersion: '>=1.28.0-0'
+home: https://velero.io
+keywords:
+- edge-ai
+- pack-platform
+- Storage
+dependencies:
+- name: velero
+  version: 12.2.5
+  repository: https://vmware-tanzu.github.io/helm-charts
+annotations:
+  catalog.cattle.io/display-name: Velero
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-velero
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub、Node
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

@@ -1,0 +1,4 @@
+Open WebUI 已安裝（release {{ .Release.Name }}，namespace {{ .Release.Namespace }}）。
+Pack：RAG；層級：Hub；架構：amd64, arm64。
+上游 chart：open-webui 18.4.0。
+授權：Open WebUI License（BSD-3 衍生＋品牌條款，v0.6+）（商用打包風險：中）。說明見 chart README。

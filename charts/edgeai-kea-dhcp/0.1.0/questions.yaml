@@ -1,0 +1,43 @@
+# Rancher 安裝表單（Apps → Charts → Kea DHCP）
+questions:
+- variable: dhcp.interface
+  label: 服務網卡
+  description: 節點上要發 DHCP 的網卡名稱
+  type: string
+  required: true
+  default: eth0
+  group: DHCP
+- variable: dhcp.subnet
+  label: 子網
+  type: string
+  required: true
+  default: 192.0.2.0/24
+  group: DHCP
+- variable: dhcp.poolStart
+  label: 位址池起
+  type: string
+  required: true
+  default: 192.0.2.100
+  group: DHCP
+- variable: dhcp.poolEnd
+  label: 位址池迄
+  type: string
+  required: true
+  default: 192.0.2.200
+  group: DHCP
+- variable: dhcp.router
+  label: 預設閘道
+  type: string
+  default: 192.0.2.1
+  group: DHCP
+- variable: dhcp.dnsServers
+  label: DNS
+  description: 逗號分隔
+  type: string
+  default: 192.0.2.1
+  group: DHCP
+- variable: components.kea.persistence.enabled
+  label: 租約持久化（PVC）
+  type: boolean
+  default: false
+  group: 儲存

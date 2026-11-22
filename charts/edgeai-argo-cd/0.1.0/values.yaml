@@ -1,0 +1,10 @@
+# Argo CD（選配） — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 上游 chart：argo-cd 10.18.2（https://argoproj.github.io/argo-helm）。
+# 所有上游參數都放在 `argo-cd:` 底下，可用上游文件的任何參數覆寫。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+argo-cd:
+  dex:
+    enabled: false
+  notifications:
+    enabled: false

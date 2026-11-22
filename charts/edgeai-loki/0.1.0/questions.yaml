@@ -1,0 +1,7 @@
+# Rancher 安裝表單（Apps → Charts → Loki（AGPL））
+questions:
+- variable: loki.singleBinary.persistence.size
+  label: PVC 大小
+  type: string
+  default: 10Gi
+  group: 儲存

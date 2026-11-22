@@ -1,0 +1,78 @@
+# Asterisk（IP PBX） — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+nameOverride: ''
+fullnameOverride: ''
+imagePullSecrets: []
+podSecurityContext: {}
+nodeSelector:
+  kubernetes.io/os: linux
+tolerations: []
+affinity: {}
+networkPolicy:
+  enabled: false
+  allowedPorts: []
+  allowFrom: []
+ingress:
+  enabled: false
+  className: ''
+  host: ''
+  tlsSecret: ''
+  annotations: {}
+  component: ''
+  servicePort: ''
+ari:
+  existingSecret: ''
+pjsip:
+  existingSecret: ''
+components:
+  asterisk:
+    enabled: true
+    hostNetwork: true
+    image:
+      repository: ''
+      tag: '22'
+      pullPolicy: IfNotPresent
+    ports:
+    - name: sip-udp
+      containerPort: 5060
+      protocol: UDP
+    - name: sip-tcp
+      containerPort: 5060
+    - name: http
+      containerPort: 8088
+    config:
+      mountPath: /etc/asterisk
+      files:
+        http.conf: |
+          [general]
+          enabled=yes
+          bindaddr=0.0.0.0
+          bindport=8088
+        rtp.conf: |
+          [general]
+          rtpstart={{ .Values.rtp.start }}
+          rtpend={{ .Values.rtp.end }}
+        logger.conf: |
+          [logfiles]
+          console => notice,warning,error,verbose
+    secretMounts:
+    - secretName: '{{ .Values.ari.existingSecret }}'
+      mountPath: /etc/asterisk/ari.conf
+      subPath: ari.conf
+    - secretName: '{{ .Values.pjsip.existingSecret }}'
+      mountPath: /etc/asterisk/pjsip.conf
+      subPath: pjsip.conf
+    persistence:
+      enabled: false
+      mountPath: /var/spool/asterisk
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+rtp:
+  start: 10000
+  end: 10199

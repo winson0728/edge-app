@@ -1,0 +1,14 @@
+# Open WebUI — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 上游 chart：open-webui 18.4.0（https://helm.openwebui.com/）。
+# 所有上游參數都放在 `open-webui:` 底下，可用上游文件的任何參數覆寫。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+open-webui:
+  ollama:
+    enabled: false
+  pipelines:
+    enabled: false
+  openaiBaseApiUrl: http://edgeai-litellm.edgeai-rag.svc:4000/v1
+  persistence:
+    enabled: true
+    size: 5Gi

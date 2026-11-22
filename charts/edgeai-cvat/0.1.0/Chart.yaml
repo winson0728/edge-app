@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-cvat
+description: CVAT 標註平台（Model Flywheel 的難例標註佇列）
+type: application
+version: 0.1.0
+appVersion: latest
+kubeVersion: '>=1.28.0-0'
+home: https://www.cvat.ai
+keywords:
+- edge-ai
+- pack-mlops
+- Applications
+dependencies:
+- name: cvat
+  version: 2.83.0
+  repository: ''
+annotations:
+  catalog.cattle.io/display-name: CVAT
+  catalog.cattle.io/certified: MLOps
+  catalog.cattle.io/namespace: edgeai-mlops
+  catalog.cattle.io/release-name: edgeai-cvat
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: MLOps
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64
+  edge-ai/license: MIT
+  edge-ai/chart-kind: upstream-wrapper

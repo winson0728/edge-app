@@ -1,0 +1,22 @@
+# Rancher 安裝表單（Apps → Charts → VictoriaMetrics＋VictoriaLogs）
+questions:
+- variable: victoria-metrics-single.enabled
+  label: 安裝 VictoriaMetrics
+  type: boolean
+  default: true
+  group: 元件
+- variable: victoria-metrics-single.server.persistentVolume.enabled
+  label: Metrics 持久化
+  type: boolean
+  default: true
+  group: 元件
+- variable: victoria-logs-single.enabled
+  label: 安裝 VictoriaLogs
+  type: boolean
+  default: true
+  group: 元件
+- variable: victoria-logs-single.server.persistentVolume.enabled
+  label: Logs 持久化
+  type: boolean
+  default: true
+  group: 元件

@@ -1,0 +1,382 @@
+# EdgeX Foundry（core） — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+nameOverride: ''
+fullnameOverride: ''
+imagePullSecrets: []
+podSecurityContext: {}
+nodeSelector:
+  kubernetes.io/os: linux
+tolerations: []
+affinity: {}
+networkPolicy:
+  enabled: true
+  allowedPorts:
+  - port: 4000
+  - port: 59880
+  - port: 59881
+  - port: 59882
+  allowFrom: []
+ingress:
+  enabled: false
+  className: ''
+  host: ''
+  tlsSecret: ''
+  annotations: {}
+  component: ''
+  servicePort: ''
+edgex:
+  dbExistingSecret: ''
+components:
+  database:
+    enabled: true
+    serviceName: edgex-postgres
+    image:
+      repository: docker.io/library/postgres
+      tag: 16.3-alpine
+      pullPolicy: IfNotPresent
+    env:
+    - name: POSTGRES_DB
+      value: edgex_db
+    - name: POSTGRES_USER
+      value: postgres
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: '{{ .Values.edgex.dbExistingSecret }}'
+          key: password
+    - name: PGDATA
+      value: /var/lib/postgresql/data/pgdata
+    ports:
+    - name: pg
+      containerPort: 5432
+    service:
+      enabled: true
+      ports:
+      - name: pg
+        port: 5432
+    readinessProbe:
+      exec:
+        command:
+        - pg_isready
+        - -U
+        - postgres
+      periodSeconds: 10
+    persistence:
+      enabled: false
+      mountPath: /var/lib/postgresql/data
+      size: 5Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+  mqtt-broker:
+    enabled: true
+    serviceName: edgex-mqtt-broker
+    image:
+      repository: docker.io/library/eclipse-mosquitto
+      tag: 2.0.23
+      pullPolicy: IfNotPresent
+    command:
+    - /usr/sbin/mosquitto
+    - -c
+    - /mosquitto-no-auth.conf
+    ports:
+    - name: mqtt
+      containerPort: 1883
+    service:
+      enabled: true
+      ports:
+      - name: mqtt
+        port: 1883
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 128Mi
+  core-keeper:
+    enabled: true
+    serviceName: edgex-core-keeper
+    image:
+      repository: docker.io/edgexfoundry/core-keeper
+      tag: 4.0.2
+      pullPolicy: IfNotPresent
+    env:
+    - name: EDGEX_SECURITY_SECRET_STORE
+      value: 'false'
+    - name: SERVICE_HOST
+      value: edgex-core-keeper
+    - name: SERVICE_SERVERBINDADDR
+      value: 0.0.0.0
+    - name: DATABASE_HOST
+      value: edgex-postgres
+    - name: MESSAGEBUS_HOST
+      value: edgex-mqtt-broker
+    - name: MESSAGEBUS_PORT
+      value: '1883'
+    - name: MESSAGEBUS_PROTOCOL
+      value: tcp
+    - name: MESSAGEBUS_TYPE
+      value: mqtt
+    - name: MESSAGEBUS_AUTHMODE
+      value: none
+    - name: WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: '{{ .Values.edgex.dbExistingSecret }}'
+          key: password
+    ports:
+    - name: http
+      containerPort: 59890
+    readinessProbe:
+      httpGet:
+        path: /api/v3/ping
+        port: http
+      periodSeconds: 10
+    livenessProbe:
+      httpGet:
+        path: /api/v3/ping
+        port: http
+      initialDelaySeconds: 120
+      periodSeconds: 20
+      failureThreshold: 6
+    service:
+      enabled: true
+      ports:
+      - name: http
+        port: 59890
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        memory: 256Mi
+  core-common-config-bootstrapper:
+    enabled: true
+    kind: Job
+    image:
+      repository: docker.io/edgexfoundry/core-common-config-bootstrapper
+      tag: 4.0.2
+      pullPolicy: IfNotPresent
+    command:
+    - /core-common-config-bootstrapper
+    - --registry
+    - -cp=keeper.http://edgex-core-keeper:59890
+    env:
+    - name: EDGEX_SECURITY_SECRET_STORE
+      value: 'false'
+    - name: ALL_SERVICES_DATABASE_HOST
+      value: edgex-postgres
+    - name: ALL_SERVICES_SERVICE_SERVERBINDADDR
+      value: 0.0.0.0
+    - name: ALL_SERVICES_WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: '{{ .Values.edgex.dbExistingSecret }}'
+          key: password
+    - name: ALL_SERVICES_MESSAGEBUS_HOST
+      value: edgex-mqtt-broker
+    - name: ALL_SERVICES_REGISTRY_HOST
+      value: edgex-core-keeper
+    - name: APP_SERVICES_CLIENTS_CORE_METADATA_HOST
+      value: edgex-core-metadata
+    - name: DEVICE_SERVICES_CLIENTS_CORE_METADATA_HOST
+      value: edgex-core-metadata
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 128Mi
+  core-metadata:
+    enabled: true
+    serviceName: edgex-core-metadata
+    image:
+      repository: docker.io/edgexfoundry/core-metadata
+      tag: 4.0.2
+      pullPolicy: IfNotPresent
+    args:
+    - --registry
+    - -cp=keeper.http://edgex-core-keeper:59890
+    env:
+    - name: EDGEX_SECURITY_SECRET_STORE
+      value: 'false'
+    - name: SERVICE_HOST
+      value: edgex-core-metadata
+    - name: SERVICE_SERVERBINDADDR
+      value: 0.0.0.0
+    - name: WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: '{{ .Values.edgex.dbExistingSecret }}'
+          key: password
+    ports:
+    - name: http
+      containerPort: 59881
+    readinessProbe:
+      httpGet:
+        path: /api/v3/ping
+        port: http
+      periodSeconds: 10
+    livenessProbe:
+      httpGet:
+        path: /api/v3/ping
+        port: http
+      initialDelaySeconds: 120
+      periodSeconds: 20
+      failureThreshold: 6
+    service:
+      enabled: true
+      ports:
+      - name: http
+        port: 59881
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        memory: 256Mi
+  core-data:
+    enabled: true
+    serviceName: edgex-core-data
+    initContainers:
+    - name: wait-core-metadata
+      image: docker.io/library/busybox:1.37
+      command:
+      - sh
+      - -c
+      - until nc -z edgex-core-metadata 59881; do echo waiting core-metadata; sleep 3; done
+    image:
+      repository: docker.io/edgexfoundry/core-data
+      tag: 4.0.2
+      pullPolicy: IfNotPresent
+    args:
+    - --registry
+    - -cp=keeper.http://edgex-core-keeper:59890
+    env:
+    - name: EDGEX_SECURITY_SECRET_STORE
+      value: 'false'
+    - name: SERVICE_HOST
+      value: edgex-core-data
+    - name: SERVICE_SERVERBINDADDR
+      value: 0.0.0.0
+    - name: WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: '{{ .Values.edgex.dbExistingSecret }}'
+          key: password
+    ports:
+    - name: http
+      containerPort: 59880
+    readinessProbe:
+      httpGet:
+        path: /api/v3/ping
+        port: http
+      periodSeconds: 10
+    livenessProbe:
+      httpGet:
+        path: /api/v3/ping
+        port: http
+      initialDelaySeconds: 120
+      periodSeconds: 20
+      failureThreshold: 6
+    service:
+      enabled: true
+      ports:
+      - name: http
+        port: 59880
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        memory: 256Mi
+  core-command:
+    enabled: true
+    serviceName: edgex-core-command
+    initContainers:
+    - name: wait-core-metadata
+      image: docker.io/library/busybox:1.37
+      command:
+      - sh
+      - -c
+      - until nc -z edgex-core-metadata 59881; do echo waiting core-metadata; sleep 3; done
+    image:
+      repository: docker.io/edgexfoundry/core-command
+      tag: 4.0.2
+      pullPolicy: IfNotPresent
+    args:
+    - --registry
+    - -cp=keeper.http://edgex-core-keeper:59890
+    env:
+    - name: EDGEX_SECURITY_SECRET_STORE
+      value: 'false'
+    - name: SERVICE_HOST
+      value: edgex-core-command
+    - name: SERVICE_SERVERBINDADDR
+      value: 0.0.0.0
+    - name: EXTERNALMQTT_URL
+      value: tcp://edgex-mqtt-broker:1883
+    - name: WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: '{{ .Values.edgex.dbExistingSecret }}'
+          key: password
+    ports:
+    - name: http
+      containerPort: 59882
+    readinessProbe:
+      httpGet:
+        path: /api/v3/ping
+        port: http
+      periodSeconds: 10
+    livenessProbe:
+      httpGet:
+        path: /api/v3/ping
+        port: http
+      initialDelaySeconds: 120
+      periodSeconds: 20
+      failureThreshold: 6
+    service:
+      enabled: true
+      ports:
+      - name: http
+        port: 59882
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        memory: 256Mi
+  ui:
+    enabled: true
+    serviceName: edgex-ui-go
+    image:
+      repository: docker.io/edgexfoundry/edgex-ui
+      tag: 4.0.2
+      pullPolicy: IfNotPresent
+    env:
+    - name: EDGEX_SECURITY_SECRET_STORE
+      value: 'false'
+    - name: SERVICE_HOST
+      value: edgex-ui-go
+    - name: SERVICE_SERVERBINDADDR
+      value: 0.0.0.0
+    ports:
+    - name: http
+      containerPort: 4000
+    service:
+      enabled: true
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 4000
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi

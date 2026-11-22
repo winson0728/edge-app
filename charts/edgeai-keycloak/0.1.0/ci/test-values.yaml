@@ -1,0 +1,6 @@
+# helm lint／template 測試值：只放 Secret 名稱，不含任何密碼
+keycloakx:
+  adminExistingSecret: keycloak-admin
+  database:
+    hostname: pg-rw.edgeai-platform.svc
+    existingSecret: keycloak-db

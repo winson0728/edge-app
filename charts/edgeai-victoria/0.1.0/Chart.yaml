@@ -1,0 +1,34 @@
+apiVersion: v2
+name: edgeai-victoria
+description: VictoriaMetrics／VictoriaLogs（Prometheus 長留存與日誌，Grafana／Loki 的 Apache-2.0 替代）
+type: application
+version: 0.1.0
+appVersion: v1.156.0
+kubeVersion: '>=1.28.0-0'
+home: https://victoriametrics.com
+keywords:
+- edge-ai
+- pack-observe
+- Monitoring
+dependencies:
+- name: victoria-metrics-single
+  version: 0.51.0
+  repository: https://victoriametrics.github.io/helm-charts/
+  condition: victoria-metrics-single.enabled
+- name: victoria-logs-single
+  version: 0.13.13
+  repository: https://victoriametrics.github.io/helm-charts/
+  condition: victoria-logs-single.enabled
+annotations:
+  catalog.cattle.io/display-name: VictoriaMetrics＋VictoriaLogs
+  catalog.cattle.io/certified: Observability
+  catalog.cattle.io/namespace: edgeai-observability
+  catalog.cattle.io/release-name: edgeai-victoria
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Observability
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

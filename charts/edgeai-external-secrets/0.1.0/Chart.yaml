@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-external-secrets
+description: External Secrets（中央 Vault／KMS → 各站 Secret）
+type: application
+version: 0.1.0
+appVersion: v2.15.0
+kubeVersion: '>=1.28.0-0'
+home: https://external-secrets.io
+keywords:
+- edge-ai
+- pack-security
+- Security
+dependencies:
+- name: external-secrets
+  version: 2.15.0
+  repository: https://charts.external-secrets.io
+annotations:
+  catalog.cattle.io/display-name: External Secrets Operator
+  catalog.cattle.io/certified: Security
+  catalog.cattle.io/namespace: edgeai-security
+  catalog.cattle.io/release-name: edgeai-external-secrets
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Security
+  edge-ai/tier: Hub、Node、Gateway
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

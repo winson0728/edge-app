@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-kyverno
+description: Kyverno 準入策略（cosign verifyImages、default-deny 等平台策略）
+type: application
+version: 0.1.0
+appVersion: v1.20.0
+kubeVersion: '>=1.28.0-0'
+home: https://kyverno.io
+keywords:
+- edge-ai
+- pack-security
+- Security
+dependencies:
+- name: kyverno
+  version: 3.10.0
+  repository: https://kyverno.github.io/kyverno/
+annotations:
+  catalog.cattle.io/display-name: Kyverno
+  catalog.cattle.io/certified: Security
+  catalog.cattle.io/namespace: edgeai-security
+  catalog.cattle.io/release-name: edgeai-kyverno
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Security
+  edge-ai/tier: Hub、Node、Gateway
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

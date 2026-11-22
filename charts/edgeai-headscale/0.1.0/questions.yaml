@@ -1,0 +1,36 @@
+# Rancher 安裝表單（Apps → Charts → Headscale）
+questions:
+- variable: headscale.serverUrl
+  label: 對外 URL
+  description: 用戶端連線的 https 網址（經 Ingress／反向代理）
+  type: string
+  required: true
+  group: Headscale
+- variable: headscale.baseDomain
+  label: MagicDNS 網域
+  description: 不可與 server_url 網域相同
+  type: string
+  default: mesh.edge.internal
+  group: Headscale
+- variable: components.headscale.persistence.enabled
+  label: 資料持久化（PVC）
+  type: boolean
+  default: true
+  group: 儲存
+- variable: components.headscale.persistence.storageClass
+  label: StorageClass
+  type: storageclass
+  group: 儲存
+- variable: ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路
+  show_subquestion_if: true
+  subquestions:
+  - variable: ingress.host
+    label: 主機名稱
+    type: hostname
+  - variable: ingress.tlsSecret
+    label: TLS Secret
+    type: string

@@ -1,0 +1,21 @@
+# Rancher 安裝表單（Apps → Charts → vLLM（production-stack））
+questions:
+- variable: vllm-stack.servingEngineSpec.enableEngine
+  label: 啟用推論引擎
+  type: boolean
+  default: true
+  group: 引擎
+- variable: vllm-stack.routerSpec.enableRouter
+  label: 啟用路由器
+  type: boolean
+  default: true
+  group: 路由器
+- variable: vllm-stack.routerSpec.serviceType
+  label: 路由器 Service 類型
+  type: enum
+  options:
+  - ClusterIP
+  - NodePort
+  - LoadBalancer
+  default: ClusterIP
+  group: 路由器

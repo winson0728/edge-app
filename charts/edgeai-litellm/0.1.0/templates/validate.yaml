@@ -1,0 +1,4 @@
+{{- /* 安裝前檢查：必填的 Secret 名稱等 */ -}}
+{{- if not (index .Values "litellm-helm" "masterkeySecretName") }}
+{{- fail "litellm-helm.masterkeySecretName 必填（含 masterkey 鍵的 Secret）" }}
+{{- end }}

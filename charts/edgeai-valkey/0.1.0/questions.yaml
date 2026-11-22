@@ -1,0 +1,22 @@
+# Rancher 安裝表單（Apps → Charts → Valkey）
+questions:
+- variable: valkey.auth.enabled
+  label: 啟用 ACL 認證
+  type: boolean
+  default: false
+  group: 認證
+  show_subquestion_if: true
+  subquestions:
+  - variable: valkey.auth.usersExistingSecret
+    label: 使用者 Secret
+    type: string
+- variable: valkey.persistence.enabled
+  label: 資料持久化（PVC）
+  type: boolean
+  default: false
+  group: 儲存
+- variable: valkey.persistence.size
+  label: PVC 大小
+  type: string
+  default: 1Gi
+  group: 儲存

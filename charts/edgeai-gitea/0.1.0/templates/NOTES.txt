@@ -1,0 +1,4 @@
+Gitea 已安裝（release {{ .Release.Name }}，namespace {{ .Release.Namespace }}）。
+Pack：Platform；層級：Hub；架構：amd64, arm64。
+上游 chart：gitea 12.7.0。
+授權：MIT（商用打包風險：低）。說明見 chart README。

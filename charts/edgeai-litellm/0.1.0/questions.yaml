@@ -1,0 +1,19 @@
+# Rancher 安裝表單（Apps → Charts → LiteLLM Proxy）
+questions:
+- variable: litellm-helm.masterkeySecretName
+  label: Master key Secret
+  description: 含 masterkey 鍵
+  type: string
+  required: true
+  group: 認證
+- variable: litellm-helm.db.deployStandalone
+  label: 一併部署 PostgreSQL
+  description: 子 chart 用 Bitnami 映像；正式站建議接 CloudNativePG
+  type: boolean
+  default: true
+  group: 資料庫
+- variable: litellm-helm.ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路

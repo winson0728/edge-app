@@ -1,0 +1,25 @@
+apiVersion: v2
+name: edgeai-mosquitto
+description: Eclipse Mosquitto MQTT broker（事件匯流排、IoT 上報；可開 dynamic security）
+type: application
+version: 0.1.0
+appVersion: 2.0.23
+kubeVersion: '>=1.28.0-0'
+home: https://mosquitto.org
+keywords:
+- edge-ai
+- pack-iot
+- Applications
+annotations:
+  catalog.cattle.io/display-name: Eclipse Mosquitto
+  catalog.cattle.io/certified: IoT/OT
+  catalog.cattle.io/namespace: edgeai-iot
+  catalog.cattle.io/release-name: edgeai-mosquitto
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: IoT/OT
+  edge-ai/tier: Hub、Node、Gateway
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: EPL-2.0 / EDL-1.0
+  edge-ai/chart-kind: edge-ai-authored

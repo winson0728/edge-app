@@ -1,0 +1,15 @@
+# Harbor — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 上游 chart：harbor 1.19.4（https://helm.goharbor.io）。
+# 所有上游參數都放在 `harbor:` 底下，可用上游文件的任何參數覆寫。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+harbor:
+  expose:
+    type: clusterIP
+    tls:
+      enabled: false
+  externalURL: https://harbor.example.com
+  existingSecretAdminPassword: ''
+  existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+  nodeSelector:
+    kubernetes.io/arch: amd64

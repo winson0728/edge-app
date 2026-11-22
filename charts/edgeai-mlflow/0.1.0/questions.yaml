@@ -1,0 +1,25 @@
+# Rancher 安裝表單（Apps → Charts → MLflow）
+questions:
+- variable: mlflow.backendStore.postgres.enabled
+  label: 後端用外部 PostgreSQL
+  type: boolean
+  default: false
+  group: 後端
+- variable: mlflow.artifactRoot.proxiedArtifactStorage
+  label: 由 MLflow 代理 artifact 存取
+  type: boolean
+  default: true
+  group: Artifact
+- variable: mlflow.service.type
+  label: Service 類型
+  type: enum
+  options:
+  - ClusterIP
+  - NodePort
+  default: ClusterIP
+  group: 網路
+- variable: mlflow.ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路

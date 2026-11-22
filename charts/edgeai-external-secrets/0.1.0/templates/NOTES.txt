@@ -1,0 +1,4 @@
+External Secrets Operator 已安裝（release {{ .Release.Name }}，namespace {{ .Release.Namespace }}）。
+Pack：Security；層級：Hub、Node、Gateway；架構：amd64, arm64。
+上游 chart：external-secrets 2.15.0。
+授權：Apache-2.0（商用打包風險：低）。說明見 chart README。

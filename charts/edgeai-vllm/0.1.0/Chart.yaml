@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-vllm
+description: vLLM production-stack（OpenAI 相容 LLM／VLM 服務＋路由器，需 GPU）
+type: application
+version: 0.1.0
+appVersion: ''
+kubeVersion: '>=1.28.0-0'
+home: https://docs.vllm.ai/projects/production-stack
+keywords:
+- edge-ai
+- pack-rag
+- Applications
+dependencies:
+- name: vllm-stack
+  version: 0.1.14
+  repository: https://vllm-project.github.io/production-stack
+annotations:
+  catalog.cattle.io/display-name: vLLM（production-stack）
+  catalog.cattle.io/certified: RAG
+  catalog.cattle.io/namespace: edgeai-rag
+  catalog.cattle.io/release-name: edgeai-vllm
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: RAG
+  edge-ai/tier: Hub、Node
+  edge-ai/arch: amd64（Thor／Spark 需改用 NVIDIA 提供的 arm64 vLLM 映像）
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper

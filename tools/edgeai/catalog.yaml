@@ -1,0 +1,1422 @@
+# Edge AI 開源套件 chart 目錄（單一真相源）
+# 產生：python tools/edgeai/build.py   → charts/edgeai-*/<version>/
+# 欄位：
+#   kind: wrapper（引用上游 chart，上游 tgz 原封放進 charts/）／self（自寫，用 tools/edgeai/common 樣板）
+#   values：wrapper 時是「放在上游 key 底下」的平台預設；self 時是整份 values（與 common 預設合併）
+#   questions：Rancher 安裝表單；wrapper 的 variable 會自動加上上游 key 前綴（寫 "^" 開頭則不加）
+#   validate：wrapper 安裝前檢查（path 為完整 values 路徑，空值就 fail）
+#   ci：helm lint／template 用的測試值（只放 Secret 名稱，不放任何密碼）
+
+defaults:
+  kubeVersion: ">=1.28.0-0"
+  home: https://github.com/winson0728/edge-app
+
+packs:
+  access:   {label: "Access & NAC", namespace: edgeai-access}
+  vision:   {label: "Vision",       namespace: edgeai-vision}
+  voice:    {label: "Voice/PTT",    namespace: edgeai-voice}
+  iot:      {label: "IoT/OT",       namespace: edgeai-iot}
+  rag:      {label: "RAG",          namespace: edgeai-rag}
+  mlops:    {label: "MLOps",        namespace: edgeai-mlops}
+  platform: {label: "Platform",     namespace: edgeai-platform}
+  observe:  {label: "Observability", namespace: edgeai-observability}
+  security: {label: "Security",     namespace: edgeai-security}
+
+charts:
+# ───────────────────────────── Access & NAC ─────────────────────────────
+- name: edgeai-freeradius
+  kind: self
+  version: 0.1.0
+  appVersion: "3.2.10"
+  display: FreeRADIUS
+  pack: access
+  categories: [Security, Networking]
+  tier: Hub、Node（Site Survival 副本）
+  arch: amd64, arm64
+  license: GPL-2.0
+  licenseRisk: 中
+  licenseNote: 不修改原始碼、以獨立容器部署（非衍生作品）；修改需開源。
+  upstreamHome: https://freeradius.org
+  description: FreeRADIUS 3.2 RADIUS server（Wi-Fi／有線 802.1X、EAP-AKA′／EAP-TLS／MAB）
+  values:
+    clients:
+      existingSecret: ""
+    components:
+      freeradius:
+        enabled: true
+        image: {repository: docker.io/freeradius/freeradius-server, tag: "3.2.10", pullPolicy: IfNotPresent}
+        args: ["-f", "-l", "stdout"]
+        ports:
+          - {name: auth, containerPort: 1812, protocol: UDP}
+          - {name: acct, containerPort: 1813, protocol: UDP}
+        service:
+          enabled: true
+          type: ClusterIP
+          ports:
+            - {name: auth, port: 1812, protocol: UDP}
+            - {name: acct, port: 1813, protocol: UDP}
+        secretMounts:
+          - {secretName: "{{ .Values.clients.existingSecret }}", mountPath: /etc/freeradius/clients.conf, subPath: clients.conf}
+        config:
+          mountPath: /etc/freeradius/sites-enabled
+          files:
+            default: |
+              # 平台預設 site：只聽 IPv4（多數 K8s Pod 網路沒有 IPv6）。EAP-AKA′／sim-aaa-adapter 掛點之後在此擴充。
+              server default {
+              listen {
+                type = auth
+                ipaddr = *
+                port = 0
+              }
+              listen {
+                type = acct
+                ipaddr = *
+                port = 0
+              }
+              authorize {
+                filter_username
+                preprocess
+                chap
+                mschap
+                suffix
+                eap {
+                  ok = return
+                }
+                files
+                expiration
+                logintime
+                pap
+              }
+              authenticate {
+                Auth-Type PAP {
+                  pap
+                }
+                Auth-Type CHAP {
+                  chap
+                }
+                Auth-Type MS-CHAP {
+                  mschap
+                }
+                mschap
+                eap
+              }
+              preacct {
+                preprocess
+                acct_unique
+                suffix
+                files
+              }
+              accounting {
+                detail
+                attr_filter.accounting_response
+              }
+              session {
+              }
+              post-auth {
+                update {
+                  &reply: += &session-state:
+                }
+                remove_reply_message_if_eap
+                Post-Auth-Type REJECT {
+                  attr_filter.access_reject
+                  eap
+                  remove_reply_message_if_eap
+                }
+              }
+              pre-proxy {
+              }
+              post-proxy {
+                eap
+              }
+              }
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits: {memory: 256Mi}
+    networkPolicy:
+      allowedPorts:
+        - {port: 1812, protocol: UDP}
+        - {port: 1813, protocol: UDP}
+  extraTemplates:
+    validate.yaml: |
+      {{- if not .Values.clients.existingSecret }}
+      {{- fail "clients.existingSecret 必填：請先建立含 clients.conf 的 Secret（NAS 共用密鑰），見 README" }}
+      {{- end }}
+  questions:
+    - {variable: clients.existingSecret, label: "NAS clients Secret 名稱", description: "含 clients.conf 鍵的 Secret（AP／Switch 的 RADIUS 共用密鑰），需先建立", type: string, required: true, group: 認證}
+    - {variable: components.freeradius.image.tag, label: 映像 tag, type: string, default: "3.2.10", group: 映像}
+    - {variable: components.freeradius.service.type, label: Service 類型, description: "AP／Switch 在叢集外時用 NodePort 或 LoadBalancer", type: enum, options: [ClusterIP, NodePort, LoadBalancer], default: ClusterIP, group: 網路}
+    - {variable: networkPolicy.enabled, label: 啟用 NetworkPolicy, type: boolean, default: true, group: 網路}
+  ci:
+    clients: {existingSecret: freeradius-clients}
+  readme: |
+    ## 安裝前
+    建立 NAS 共用密鑰（不要寫進 values）：
+    ```bash
+    kubectl -n edgeai-access create secret generic freeradius-clients --from-file=clients.conf=./clients.conf
+    ```
+    `clients.conf` 範例（密鑰自己產生）：
+    ```
+    client ap-floor1 { ipaddr = 192.0.2.0/24  secret = <自行產生> }
+    ```
+    官方映像的設定目錄是 `/etc/freeradius`。`default` site 由 `components.freeradius.config` 提供（只聽 IPv4）；EAP 等其他設定可再加 ConfigMap／Secret 覆蓋或額外 Secret 覆蓋，sim-aaa-adapter 掛點（rlm_python3）待自研模組完成後補。
+
+- name: edgeai-kea-dhcp
+  kind: self
+  version: 0.1.0
+  appVersion: "3.0.5"
+  display: Kea DHCP
+  pack: access
+  categories: [Networking]
+  tier: Hub、Node
+  arch: amd64（ISC 官方映像只有 amd64；arm64 需自建映像）
+  license: MPL-2.0
+  licenseRisk: 低
+  licenseNote: 修改 Kea 原始檔需公開該檔；純部署無義務。
+  upstreamHome: https://www.isc.org/kea/
+  description: ISC Kea DHCPv4（hostNetwork，直接服務指定網卡）
+  values:
+    dhcp:
+      interface: eth0
+      subnet: 192.0.2.0/24
+      poolStart: 192.0.2.100
+      poolEnd: 192.0.2.200
+      router: 192.0.2.1
+      dnsServers: 192.0.2.1
+      validLifetime: 4000
+    nodeSelector: {kubernetes.io/os: linux, kubernetes.io/arch: amd64}
+    networkPolicy: {enabled: false}
+    components:
+      kea:
+        enabled: true
+        hostNetwork: true
+        image: {repository: docker.cloudsmith.io/isc/docker/kea-dhcp4, tag: "3.0.5", pullPolicy: IfNotPresent}
+        securityContext:
+          capabilities: {add: [NET_ADMIN, NET_RAW, NET_BIND_SERVICE]}
+        config:
+          mountPath: /etc/kea
+          files:
+            kea-dhcp4.conf: |
+              {
+                "Dhcp4": {
+                  "interfaces-config": { "interfaces": [ {{ .Values.dhcp.interface | quote }} ] },
+                  "lease-database": { "type": "memfile", "persist": true, "name": "/var/lib/kea/dhcp4.leases" },
+                  "valid-lifetime": {{ .Values.dhcp.validLifetime }},
+                  "subnet4": [
+                    {
+                      "id": 1,
+                      "subnet": {{ .Values.dhcp.subnet | quote }},
+                      "pools": [ { "pool": "{{ .Values.dhcp.poolStart }} - {{ .Values.dhcp.poolEnd }}" } ],
+                      "option-data": [
+                        { "name": "routers", "data": {{ .Values.dhcp.router | quote }} },
+                        { "name": "domain-name-servers", "data": {{ .Values.dhcp.dnsServers | quote }} }
+                      ]
+                    }
+                  ],
+                  "loggers": [ { "name": "kea-dhcp4", "output-options": [ { "output": "stdout" } ], "severity": "INFO" } ]
+                }
+              }
+        persistence: {enabled: false, mountPath: /var/lib/kea, size: 1Gi}
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits: {memory: 256Mi}
+  questions:
+    - {variable: dhcp.interface, label: 服務網卡, description: "節點上要發 DHCP 的網卡名稱", type: string, required: true, default: eth0, group: DHCP}
+    - {variable: dhcp.subnet, label: 子網, type: string, required: true, default: 192.0.2.0/24, group: DHCP}
+    - {variable: dhcp.poolStart, label: 位址池起, type: string, required: true, default: 192.0.2.100, group: DHCP}
+    - {variable: dhcp.poolEnd, label: 位址池迄, type: string, required: true, default: 192.0.2.200, group: DHCP}
+    - {variable: dhcp.router, label: 預設閘道, type: string, default: 192.0.2.1, group: DHCP}
+    - {variable: dhcp.dnsServers, label: DNS, description: "逗號分隔", type: string, default: 192.0.2.1, group: DHCP}
+    - {variable: components.kea.persistence.enabled, label: 租約持久化（PVC）, type: boolean, default: false, group: 儲存}
+  readme: |
+    - 用 hostNetwork 直接在節點網卡收送 DHCP；請用 `nodeSelector` 鎖定要服務的節點，避免同網段出現兩台 DHCP。
+    - HA（Kea hot-standby）與 Site Survival 副本是 v2 Roadmap §3.2 的工作，本 chart 先提供單機版。
+    - 預設位址是文件用的 192.0.2.0/24（RFC 5737），安裝時務必改成現場網段。
+
+- name: edgeai-keycloak
+  kind: wrapper
+  version: 0.1.0
+  display: Keycloak
+  pack: access
+  categories: [Security]
+  tier: Hub
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: keycloakx, version: 7.4.0, repository: https://codecentric.github.io/helm-charts, home: https://www.keycloak.org, note: "社群（codecentric）chart，使用 Keycloak 官方映像 quay.io/keycloak/keycloak"}
+  description: Keycloak（OIDC／SSO，平台與各模組的身分來源）
+  values:
+    adminExistingSecret: ""
+    command: ["/opt/keycloak/bin/kc.sh", "start", "--http-port=8080", "--hostname-strict=false", "--http-enabled=true"]
+    extraEnv: |
+      - name: KC_BOOTSTRAP_ADMIN_USERNAME
+        valueFrom: {secretKeyRef: {name: {{ .Values.adminExistingSecret | quote }}, key: username}}
+      - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+        valueFrom: {secretKeyRef: {name: {{ .Values.adminExistingSecret | quote }}, key: password}}
+      - name: KC_HEALTH_ENABLED
+        value: "true"
+    proxy: {mode: xforwarded}
+    database:
+      vendor: postgres
+      hostname: ""
+      port: 5432
+      database: keycloak
+      username: keycloak
+      existingSecret: ""
+      existingSecretKey: password
+  validate:
+    - {path: keycloakx.adminExistingSecret, msg: "keycloakx.adminExistingSecret 必填（含 username／password 的 Secret）"}
+    - {path: keycloakx.database.hostname, msg: "keycloakx.database.hostname 必填（PostgreSQL，例如 edgeai-cloudnative-pg 建的叢集）"}
+    - {path: keycloakx.database.existingSecret, msg: "keycloakx.database.existingSecret 必填"}
+  questions:
+    - {variable: adminExistingSecret, label: 管理者 Secret, description: "含 username、password 兩個鍵", type: string, required: true, group: 管理者}
+    - {variable: database.hostname, label: PostgreSQL 主機, type: string, required: true, group: 資料庫}
+    - {variable: database.database, label: 資料庫名稱, type: string, default: keycloak, group: 資料庫}
+    - {variable: database.username, label: 資料庫帳號, type: string, default: keycloak, group: 資料庫}
+    - {variable: database.existingSecret, label: 資料庫密碼 Secret, description: "鍵名 password", type: string, required: true, group: 資料庫}
+    - {variable: ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路}
+  ci:
+    keycloakx:
+      adminExistingSecret: keycloak-admin
+      database: {hostname: pg-rw.edgeai-platform.svc, existingSecret: keycloak-db}
+
+- name: edgeai-step-ca
+  kind: wrapper
+  version: 0.1.0
+  display: step-ca 私有 CA
+  pack: access
+  categories: [Security]
+  tier: Hub
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: step-certificates, version: 1.30.1, repository: https://smallstep.github.io/helm-charts, home: https://smallstep.com/docs/step-ca/, note: "官方 chart"}
+  description: smallstep step-ca（私有 CA、ACME／EST，裝置身分與 mTLS）
+  values:
+    ca:
+      name: Edge AI Private CA
+      db: {persistent: true, size: 2Gi}
+  questions:
+    - {variable: ca.name, label: CA 名稱, type: string, default: Edge AI Private CA, group: CA}
+    - {variable: ca.db.persistent, label: 資料持久化（PVC）, type: boolean, default: true, group: 儲存}
+    - {variable: ca.db.size, label: PVC 大小, type: string, default: 2Gi, group: 儲存}
+  readme: |
+    預設由上游的 bootstrap Job 在叢集內產生 CA 與密碼並存成 Secret（不經過 values）。正式站建議用 `step ca init --helm` 離線產生後以 `inject`／`existingSecrets` 帶入，CA 私鑰另行保管。
+
+- name: edgeai-headscale
+  kind: self
+  version: 0.1.0
+  appVersion: "0.29.7"
+  display: Headscale
+  pack: access
+  categories: [Networking]
+  tier: Hub
+  arch: amd64, arm64
+  license: BSD-3-Clause
+  licenseRisk: 低
+  upstreamHome: https://headscale.net
+  description: Headscale（自架 Tailscale 控制面，站點 Mesh／行動指揮車）
+  values:
+    headscale:
+      serverUrl: https://headscale.example.com
+      baseDomain: mesh.edge.internal
+      nameservers: ["1.1.1.1"]
+    components:
+      headscale:
+        enabled: true
+        image: {repository: docker.io/headscale/headscale, tag: "0.29.7", pullPolicy: IfNotPresent}
+        args: ["serve"]
+        ports:
+          - {name: http, containerPort: 8080}
+          - {name: metrics, containerPort: 9090}
+          - {name: grpc, containerPort: 50443}
+        service:
+          enabled: true
+          type: ClusterIP
+          ports:
+            - {name: http, port: 8080}
+            - {name: metrics, port: 9090}
+            - {name: grpc, port: 50443}
+        readinessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 10}
+        config:
+          mountPath: /etc/headscale
+          files:
+            config.yaml: |
+              server_url: {{ .Values.headscale.serverUrl }}
+              listen_addr: 0.0.0.0:8080
+              metrics_listen_addr: 0.0.0.0:9090
+              grpc_listen_addr: 0.0.0.0:50443
+              grpc_allow_insecure: false
+              noise:
+                private_key_path: /var/lib/headscale/noise_private.key
+              prefixes:
+                v4: 100.64.0.0/10
+                v6: fd7a:115c:a1e0::/48
+                allocation: sequential
+              derp:
+                server:
+                  enabled: false
+                urls:
+                  - https://controlplane.tailscale.com/derpmap/default
+                auto_update_enabled: true
+                update_frequency: 3h
+              disable_check_updates: true
+              database:
+                type: sqlite
+                sqlite:
+                  path: /var/lib/headscale/db.sqlite
+                  write_ahead_log: true
+              log:
+                level: info
+              policy:
+                mode: database
+              dns:
+                magic_dns: true
+                base_domain: {{ .Values.headscale.baseDomain }}
+                override_local_dns: true
+                nameservers:
+                  global: {{ toJson .Values.headscale.nameservers }}
+              unix_socket: /var/run/headscale/headscale.sock
+              unix_socket_permission: "0770"
+        extraVolumes:
+          - {name: run, emptyDir: {}}
+        extraVolumeMounts:
+          - {name: run, mountPath: /var/run/headscale}
+        persistence: {enabled: true, mountPath: /var/lib/headscale, size: 1Gi}
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits: {memory: 256Mi}
+    networkPolicy:
+      allowedPorts: [{port: 8080}]
+    ingress: {enabled: false, component: headscale, servicePort: http}
+  questions:
+    - {variable: headscale.serverUrl, label: 對外 URL, description: "用戶端連線的 https 網址（經 Ingress／反向代理）", type: string, required: true, group: Headscale}
+    - {variable: headscale.baseDomain, label: MagicDNS 網域, description: "不可與 server_url 網域相同", type: string, default: mesh.edge.internal, group: Headscale}
+    - {variable: components.headscale.persistence.enabled, label: 資料持久化（PVC）, type: boolean, default: true, group: 儲存}
+    - {variable: components.headscale.persistence.storageClass, label: StorageClass, type: storageclass, group: 儲存}
+    - {variable: ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路, show_subquestion_if: true, subquestions: [{variable: ingress.host, label: 主機名稱, type: hostname}, {variable: ingress.tlsSecret, label: TLS Secret, type: string}]}
+  readme: |
+    - DERP 預設用 Tailscale 公用 derpmap；離線站點請把 `derp.server.enabled` 打開並改 `components.headscale.config`。
+    - 建使用者／金鑰：`kubectl exec deploy/<release>-headscale -- headscale users create site-a`。
+
+# ───────────────────────────── Vision ─────────────────────────────
+- name: edgeai-mediamtx
+  kind: self
+  version: 0.1.0
+  appVersion: "1.21.4"
+  display: MediaMTX
+  pack: vision
+  categories: [Applications]
+  tier: Node、Gateway
+  arch: amd64, arm64
+  license: MIT
+  licenseRisk: 低
+  upstreamHome: https://github.com/bluenviron/mediamtx
+  description: MediaMTX 串流伺服器（RTSP／RTMP／HLS／WebRTC／SRT，Camera 匯流與 Evidence 錄影）
+  values:
+    components:
+      mediamtx:
+        enabled: true
+        image: {repository: docker.io/bluenviron/mediamtx, tag: "1.21.4", pullPolicy: IfNotPresent}
+        ports:
+          - {name: rtsp, containerPort: 8554}
+          - {name: rtp, containerPort: 8000, protocol: UDP}
+          - {name: rtcp, containerPort: 8001, protocol: UDP}
+          - {name: rtmp, containerPort: 1935}
+          - {name: hls, containerPort: 8888}
+          - {name: webrtc, containerPort: 8889}
+          - {name: webrtc-udp, containerPort: 8189, protocol: UDP}
+          - {name: srt, containerPort: 8890, protocol: UDP}
+          - {name: api, containerPort: 9997}
+          - {name: metrics, containerPort: 9998}
+        service:
+          enabled: true
+          type: ClusterIP
+          ports:
+            - {name: rtsp, port: 8554}
+            - {name: rtp, port: 8000, protocol: UDP}
+            - {name: rtcp, port: 8001, protocol: UDP}
+            - {name: rtmp, port: 1935}
+            - {name: hls, port: 8888}
+            - {name: webrtc, port: 8889}
+            - {name: webrtc-udp, port: 8189, protocol: UDP}
+            - {name: srt, port: 8890, protocol: UDP}
+            - {name: api, port: 9997}
+            - {name: metrics, port: 9998}
+        readinessProbe: {tcpSocket: {port: rtsp}, periodSeconds: 10}
+        config:
+          mountPath: /
+          files:
+            mediamtx.yml: |
+              logLevel: info
+              api: yes
+              apiAddress: :9997
+              metrics: yes
+              metricsAddress: :9998
+              rtspAddress: :8554
+              rtpAddress: :8000
+              rtcpAddress: :8001
+              rtmpAddress: :1935
+              hlsAddress: :8888
+              webrtcAddress: :8889
+              webrtcLocalUDPAddress: :8189
+              srtAddress: :8890
+              authInternalUsers:
+                - user: any
+                  pass:
+                  ips: []
+                  permissions:
+                    - action: publish
+                    - action: read
+                    - action: playback
+                - user: any
+                  pass:
+                  ips: {{ toJson .Values.apiAllowedCIDRs }}
+                  permissions:
+                    - action: api
+                    - action: metrics
+              pathDefaults:
+                record: {{ .Values.recording.enabled }}
+                recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+                recordDeleteAfter: {{ .Values.recording.deleteAfter }}
+              paths:
+                all_others:
+        persistence: {enabled: false, mountPath: /recordings, size: 50Gi}
+        resources:
+          requests: {cpu: 100m, memory: 128Mi}
+          limits: {memory: 1Gi}
+    apiAllowedCIDRs: ["127.0.0.1/32", "10.0.0.0/8"]
+    recording: {enabled: false, deleteAfter: 24h}
+    networkPolicy:
+      allowedPorts:
+        - {port: 8554}
+        - {port: 8000, protocol: UDP}
+        - {port: 8001, protocol: UDP}
+        - {port: 1935}
+        - {port: 8888}
+        - {port: 8889}
+        - {port: 8189, protocol: UDP}
+        - {port: 8890, protocol: UDP}
+  questions:
+    - {variable: components.mediamtx.service.type, label: Service 類型, description: "Camera／觀看端在叢集外時用 NodePort 或 LoadBalancer", type: enum, options: [ClusterIP, NodePort, LoadBalancer], default: ClusterIP, group: 網路}
+    - {variable: recording.enabled, label: 環形錄影（Evidence 用）, type: boolean, default: false, group: 錄影, show_subquestion_if: true, subquestions: [{variable: recording.deleteAfter, label: 保留時間, type: string, default: 24h}, {variable: components.mediamtx.persistence.enabled, label: 錄影存 PVC, type: boolean, default: false}, {variable: components.mediamtx.persistence.size, label: PVC 大小, type: string, default: 50Gi}]}
+  readme: |
+    預設任何來源都能推流與觀看（MediaMTX 預設行為），API／metrics 只開給 `apiAllowedCIDRs`。正式站請在 `components.mediamtx.config` 改成帳號制（密碼用 `MTX_*` 環境變數從 Secret 帶入）。
+
+- name: edgeai-triton
+  kind: self
+  version: 0.1.0
+  appVersion: "26.11"
+  display: Triton Inference Server
+  pack: vision
+  categories: [Applications]
+  tier: Hub、Node
+  arch: amd64, arm64（Thor／Spark 用同一個多架構映像；Orin 需 JetPack 版映像）
+  license: BSD-3-Clause（程式）＋ NVIDIA 映像 EULA
+  licenseRisk: 低中
+  licenseNote: 映像含 CUDA／TensorRT，依 NVIDIA 再散布條款；不重新打包映像即可。
+  upstreamHome: https://github.com/triton-inference-server/server
+  description: NVIDIA Triton 推論伺服器（YOLO／TensorRT 模型服務，需 GPU）
+  values:
+    triton:
+      modelRepository: /models
+      extraArgs: ["--model-control-mode=poll", "--repository-poll-secs=30"]
+    components:
+      triton:
+        enabled: true
+        runtimeClassName: nvidia
+        image: {repository: nvcr.io/nvidia/tritonserver, tag: "26.11-py3", pullPolicy: IfNotPresent}
+        command: ["tritonserver"]
+        args:
+          - "--model-repository={{ .Values.triton.modelRepository }}"
+          - "{{ join \" \" .Values.triton.extraArgs }}"
+        ports:
+          - {name: http, containerPort: 8000}
+          - {name: grpc, containerPort: 8001}
+          - {name: metrics, containerPort: 8002}
+        service:
+          enabled: true
+          type: ClusterIP
+          ports:
+            - {name: http, port: 8000}
+            - {name: grpc, port: 8001}
+            - {name: metrics, port: 8002}
+        readinessProbe: {httpGet: {path: /v2/health/ready, port: http}, periodSeconds: 10}
+        startupProbe: {httpGet: {path: /v2/health/live, port: http}, periodSeconds: 10, failureThreshold: 60}
+        persistence: {enabled: true, mountPath: /models, size: 20Gi}
+        extraVolumes:
+          - {name: dshm, emptyDir: {medium: Memory, sizeLimit: 1Gi}}
+        extraVolumeMounts:
+          - {name: dshm, mountPath: /dev/shm}
+        resources:
+          requests: {cpu: 500m, memory: 2Gi}
+          limits: {memory: 16Gi, nvidia.com/gpu: 1}
+  questions:
+    - {variable: components.triton.image.tag, label: 映像 tag, description: "x86／Thor／Spark：26.11-py3；Orin（JetPack 6）請改 JetPack 版映像", type: string, default: "26.11-py3", group: 映像}
+    - {variable: components.triton.runtimeClassName, label: RuntimeClass, type: string, default: nvidia, group: GPU}
+    - {variable: triton.modelRepository, label: 模型庫位置, description: "/models（PVC）或 s3://...", type: string, default: /models, group: 模型}
+    - {variable: components.triton.persistence.existingClaim, label: 既有模型 PVC, description: "空白則新建 PVC", type: pvc, group: 模型}
+    - {variable: components.triton.persistence.size, label: 新建 PVC 大小, type: string, default: 20Gi, group: 模型}
+  readme: |
+    - 需要 NVIDIA GPU Operator（或 k3s 的 nvidia runtime）與 `nvidia` RuntimeClass。
+    - 模型的 TensorRT engine 綁 GPU 世代（Orin sm_87、Thor、RTX PRO 各不同），由 model-release-controller（自研）按世代建置後放進模型庫。
+
+# ───────────────────────────── Voice/PTT ─────────────────────────────
+- name: edgeai-asterisk
+  kind: self
+  version: 0.1.0
+  appVersion: "22"
+  display: Asterisk（IP PBX）
+  pack: voice
+  categories: [Applications, Networking]
+  tier: Hub、Node（Survivable Gateway）
+  arch: amd64, arm64（映像需自建）
+  license: GPL-2.0
+  licenseRisk: 中
+  licenseNote: 不修改、獨立部署；或向 Sangoma 購買商業授權。上游沒有官方容器映像，映像由我們自建並自行承擔散布義務（附原始碼取得方式）。
+  upstreamHome: https://www.asterisk.org
+  description: Asterisk 22 LTS（SIP／RTP、ConfBridge、ARI，ptt-gateway 的媒體面）
+  values:
+    ari:
+      existingSecret: ""
+    pjsip:
+      existingSecret: ""
+    nodeSelector: {kubernetes.io/os: linux}
+    networkPolicy: {enabled: false}
+    components:
+      asterisk:
+        enabled: true
+        hostNetwork: true
+        image: {repository: "", tag: "22", pullPolicy: IfNotPresent}
+        ports:
+          - {name: sip-udp, containerPort: 5060, protocol: UDP}
+          - {name: sip-tcp, containerPort: 5060}
+          - {name: http, containerPort: 8088}
+        config:
+          mountPath: /etc/asterisk
+          files:
+            http.conf: |
+              [general]
+              enabled=yes
+              bindaddr=0.0.0.0
+              bindport=8088
+            rtp.conf: |
+              [general]
+              rtpstart={{ .Values.rtp.start }}
+              rtpend={{ .Values.rtp.end }}
+            logger.conf: |
+              [logfiles]
+              console => notice,warning,error,verbose
+        secretMounts:
+          - {secretName: "{{ .Values.ari.existingSecret }}", mountPath: /etc/asterisk/ari.conf, subPath: ari.conf}
+          - {secretName: "{{ .Values.pjsip.existingSecret }}", mountPath: /etc/asterisk/pjsip.conf, subPath: pjsip.conf}
+        persistence: {enabled: false, mountPath: /var/spool/asterisk, size: 10Gi}
+        resources:
+          requests: {cpu: 200m, memory: 256Mi}
+          limits: {memory: 1Gi}
+    rtp: {start: 10000, end: 10199}
+  questions:
+    - {variable: components.asterisk.image.repository, label: 映像位置, description: "上游沒有官方映像，請填自建映像（例如 harbor.local/edgeai/asterisk）", type: string, required: true, group: 映像}
+    - {variable: components.asterisk.image.tag, label: 映像 tag, type: string, default: "22", group: 映像}
+    - {variable: ari.existingSecret, label: ARI 設定 Secret, description: "含 ari.conf（ARI 帳密），ptt-gateway 需要", type: string, group: 設定}
+    - {variable: pjsip.existingSecret, label: PJSIP 設定 Secret, description: "含 pjsip.conf（分機與密碼）", type: string, group: 設定}
+    - {variable: rtp.start, label: RTP 起始埠, type: int, default: 10000, group: 網路}
+    - {variable: rtp.end, label: RTP 結束埠, type: int, default: 10199, group: 網路}
+  ci:
+    components: {asterisk: {image: {repository: registry.example/edgeai/asterisk}}}
+  readme: |
+    - **映像要自建**：Asterisk 官方不發容器映像，`components.asterisk.image.repository` 必填（README 的「映像清單」列出建置來源）。
+    - 用 hostNetwork 讓 SIP／RTP 直接走節點網卡（RTP 埠段無法用 Service 對應）。
+    - 分機密碼、ARI 帳密都放 Secret（`pjsip.conf`、`ari.conf`），不要放 values。
+
+# ───────────────────────────── IoT/OT ─────────────────────────────
+- name: edgeai-mosquitto
+  kind: self
+  version: 0.1.0
+  appVersion: "2.0.23"
+  display: Eclipse Mosquitto
+  pack: iot
+  categories: [Applications]
+  tier: Hub、Node、Gateway
+  arch: amd64, arm64
+  license: EPL-2.0 / EDL-1.0
+  licenseRisk: 低
+  upstreamHome: https://mosquitto.org
+  description: Eclipse Mosquitto MQTT broker（事件匯流排、IoT 上報；可開 dynamic security）
+  values:
+    mqtt:
+      allowAnonymous: false
+      passwordSecret: ""
+      dynamicSecurity: false
+      websockets: false
+    podSecurityContext: {fsGroup: 1883}
+    components:
+      mosquitto:
+        enabled: true
+        image: {repository: docker.io/library/eclipse-mosquitto, tag: "2.0.23", pullPolicy: IfNotPresent}
+        ports:
+          - {name: mqtt, containerPort: 1883}
+          - {name: ws, containerPort: 9001}
+        service:
+          enabled: true
+          type: ClusterIP
+          ports:
+            - {name: mqtt, port: 1883}
+            - {name: ws, port: 9001}
+        readinessProbe: {tcpSocket: {port: mqtt}, periodSeconds: 10}
+        config:
+          mountPath: /mosquitto/config
+          files:
+            mosquitto.conf: |
+              persistence true
+              persistence_location /mosquitto/data/
+              log_dest stdout
+              per_listener_settings false
+              listener 1883
+              {{- if .Values.mqtt.websockets }}
+              listener 9001
+              protocol websockets
+              {{- end }}
+              allow_anonymous {{ .Values.mqtt.allowAnonymous }}
+              {{- if .Values.mqtt.passwordSecret }}
+              password_file /mosquitto/secret/passwd
+              {{- end }}
+              {{- if .Values.mqtt.dynamicSecurity }}
+              plugin /usr/lib/mosquitto_dynamic_security.so
+              plugin_opt_config_file /mosquitto/data/dynamic-security.json
+              {{- end }}
+        secretMounts:
+          - {secretName: "{{ .Values.mqtt.passwordSecret }}", mountPath: /mosquitto/secret, defaultMode: 288}
+        persistence: {enabled: false, mountPath: /mosquitto/data, size: 1Gi}
+        resources:
+          requests: {cpu: 20m, memory: 32Mi}
+          limits: {memory: 256Mi}
+    networkPolicy:
+      allowedPorts: [{port: 1883}, {port: 9001}]
+  extraTemplates:
+    validate.yaml: |
+      {{- if and (not .Values.mqtt.allowAnonymous) (not .Values.mqtt.passwordSecret) (not .Values.mqtt.dynamicSecurity) }}
+      {{- fail "未開匿名時必須提供 mqtt.passwordSecret（含 passwd 鍵，mosquitto_passwd 產生）或開 mqtt.dynamicSecurity" }}
+      {{- end }}
+  questions:
+    - {variable: mqtt.passwordSecret, label: 帳密檔 Secret, description: "含 passwd 鍵（mosquitto_passwd 產生的雜湊檔）", type: string, group: 認證}
+    - {variable: mqtt.allowAnonymous, label: 允許匿名, description: "只建議 Lab 用", type: boolean, default: false, group: 認證}
+    - {variable: mqtt.dynamicSecurity, label: 啟用 Dynamic Security, description: "access-policy-service 下發 ACL 用", type: boolean, default: false, group: 認證}
+    - {variable: mqtt.websockets, label: 開 WebSocket（9001）, type: boolean, default: false, group: 網路}
+    - {variable: components.mosquitto.service.type, label: Service 類型, type: enum, options: [ClusterIP, NodePort, LoadBalancer], default: ClusterIP, group: 網路}
+    - {variable: components.mosquitto.persistence.enabled, label: 資料持久化（PVC）, type: boolean, default: false, group: 儲存}
+  ci:
+    mqtt: {passwordSecret: mosquitto-passwd}
+  readme: |
+    建立帳密檔（雜湊，不是明碼）：
+    ```bash
+    docker run --rm -it eclipse-mosquitto:2.0.23 sh -c 'mosquitto_passwd -c /tmp/passwd edge && cat /tmp/passwd' > passwd
+    kubectl -n edgeai-iot create secret generic mosquitto-passwd --from-file=passwd=./passwd
+    ```
+    Dynamic Security 的初始 admin 需在 Pod 內用 `mosquitto_ctrl dynsec init` 建立（密碼互動輸入）。
+
+- name: edgeai-edgex
+  kind: self
+  version: 0.1.0
+  appVersion: "4.0.2"
+  display: EdgeX Foundry（core）
+  pack: iot
+  categories: [Applications]
+  tier: Node、Gateway
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstreamHome: https://www.edgexfoundry.org
+  description: EdgeX Foundry 4.0 core 子集（keeper、metadata、data、command、UI，no-secty 模式）
+  values:
+    edgex:
+      dbExistingSecret: ""
+    networkPolicy:
+      allowedPorts: [{port: 4000}, {port: 59880}, {port: 59881}, {port: 59882}]
+    components:
+      database:
+        enabled: true
+        serviceName: edgex-postgres
+        image: {repository: docker.io/library/postgres, tag: "16.3-alpine", pullPolicy: IfNotPresent}
+        env:
+          - {name: POSTGRES_DB, value: edgex_db}
+          - {name: POSTGRES_USER, value: postgres}
+          - {name: POSTGRES_PASSWORD, valueFrom: {secretKeyRef: {name: "{{ .Values.edgex.dbExistingSecret }}", key: password}}}
+          - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+        ports: [{name: pg, containerPort: 5432}]
+        service: {enabled: true, ports: [{name: pg, port: 5432}]}
+        readinessProbe: {exec: {command: [pg_isready, -U, postgres]}, periodSeconds: 10}
+        persistence: {enabled: false, mountPath: /var/lib/postgresql/data, size: 5Gi}
+        resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {memory: 512Mi}}
+      mqtt-broker:
+        enabled: true
+        serviceName: edgex-mqtt-broker
+        image: {repository: docker.io/library/eclipse-mosquitto, tag: "2.0.23", pullPolicy: IfNotPresent}
+        command: [/usr/sbin/mosquitto, -c, /mosquitto-no-auth.conf]
+        ports: [{name: mqtt, containerPort: 1883}]
+        service: {enabled: true, ports: [{name: mqtt, port: 1883}]}
+        resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 128Mi}}
+      core-keeper:
+        enabled: true
+        serviceName: edgex-core-keeper
+        image: {repository: docker.io/edgexfoundry/core-keeper, tag: "4.0.2", pullPolicy: IfNotPresent}
+        env:
+          - {name: EDGEX_SECURITY_SECRET_STORE, value: "false"}
+          - {name: SERVICE_HOST, value: edgex-core-keeper}
+          - {name: SERVICE_SERVERBINDADDR, value: "0.0.0.0"}
+          - {name: DATABASE_HOST, value: edgex-postgres}
+          - {name: MESSAGEBUS_HOST, value: edgex-mqtt-broker}
+          - {name: MESSAGEBUS_PORT, value: "1883"}
+          - {name: MESSAGEBUS_PROTOCOL, value: tcp}
+          - {name: MESSAGEBUS_TYPE, value: mqtt}
+          - {name: MESSAGEBUS_AUTHMODE, value: none}
+          - {name: WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD, valueFrom: {secretKeyRef: {name: "{{ .Values.edgex.dbExistingSecret }}", key: password}}}
+        ports: [{name: http, containerPort: 59890}]
+        readinessProbe: {httpGet: {path: /api/v3/ping, port: http}, periodSeconds: 10}
+        livenessProbe: {httpGet: {path: /api/v3/ping, port: http}, initialDelaySeconds: 120, periodSeconds: 20, failureThreshold: 6}
+        service: {enabled: true, ports: [{name: http, port: 59890}]}
+        resources: {requests: {cpu: 20m, memory: 32Mi}, limits: {memory: 256Mi}}
+      core-common-config-bootstrapper:
+        enabled: true
+        kind: Job
+        image: {repository: docker.io/edgexfoundry/core-common-config-bootstrapper, tag: "4.0.2", pullPolicy: IfNotPresent}
+        command: [/core-common-config-bootstrapper, --registry, "-cp=keeper.http://edgex-core-keeper:59890"]
+        env:
+          - {name: EDGEX_SECURITY_SECRET_STORE, value: "false"}
+          - {name: ALL_SERVICES_DATABASE_HOST, value: edgex-postgres}
+          - {name: ALL_SERVICES_SERVICE_SERVERBINDADDR, value: "0.0.0.0"}
+          - {name: ALL_SERVICES_WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD, valueFrom: {secretKeyRef: {name: "{{ .Values.edgex.dbExistingSecret }}", key: password}}}
+          - {name: ALL_SERVICES_MESSAGEBUS_HOST, value: edgex-mqtt-broker}
+          - {name: ALL_SERVICES_REGISTRY_HOST, value: edgex-core-keeper}
+          - {name: APP_SERVICES_CLIENTS_CORE_METADATA_HOST, value: edgex-core-metadata}
+          - {name: DEVICE_SERVICES_CLIENTS_CORE_METADATA_HOST, value: edgex-core-metadata}
+        resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 128Mi}}
+      core-metadata:
+        enabled: true
+        serviceName: edgex-core-metadata
+        image: {repository: docker.io/edgexfoundry/core-metadata, tag: "4.0.2", pullPolicy: IfNotPresent}
+        args: [--registry, "-cp=keeper.http://edgex-core-keeper:59890"]
+        env:
+          - {name: EDGEX_SECURITY_SECRET_STORE, value: "false"}
+          - {name: SERVICE_HOST, value: edgex-core-metadata}
+          - {name: SERVICE_SERVERBINDADDR, value: "0.0.0.0"}
+          - {name: WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD, valueFrom: {secretKeyRef: {name: "{{ .Values.edgex.dbExistingSecret }}", key: password}}}
+        ports: [{name: http, containerPort: 59881}]
+        readinessProbe: {httpGet: {path: /api/v3/ping, port: http}, periodSeconds: 10}
+        livenessProbe: {httpGet: {path: /api/v3/ping, port: http}, initialDelaySeconds: 120, periodSeconds: 20, failureThreshold: 6}
+        service: {enabled: true, ports: [{name: http, port: 59881}]}
+        resources: {requests: {cpu: 20m, memory: 32Mi}, limits: {memory: 256Mi}}
+      core-data:
+        enabled: true
+        serviceName: edgex-core-data
+        initContainers:
+          - name: wait-core-metadata
+            image: docker.io/library/busybox:1.37
+            command: [sh, -c, "until nc -z edgex-core-metadata 59881; do echo waiting core-metadata; sleep 3; done"]
+        image: {repository: docker.io/edgexfoundry/core-data, tag: "4.0.2", pullPolicy: IfNotPresent}
+        args: [--registry, "-cp=keeper.http://edgex-core-keeper:59890"]
+        env:
+          - {name: EDGEX_SECURITY_SECRET_STORE, value: "false"}
+          - {name: SERVICE_HOST, value: edgex-core-data}
+          - {name: SERVICE_SERVERBINDADDR, value: "0.0.0.0"}
+          - {name: WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD, valueFrom: {secretKeyRef: {name: "{{ .Values.edgex.dbExistingSecret }}", key: password}}}
+        ports: [{name: http, containerPort: 59880}]
+        readinessProbe: {httpGet: {path: /api/v3/ping, port: http}, periodSeconds: 10}
+        livenessProbe: {httpGet: {path: /api/v3/ping, port: http}, initialDelaySeconds: 120, periodSeconds: 20, failureThreshold: 6}
+        service: {enabled: true, ports: [{name: http, port: 59880}]}
+        resources: {requests: {cpu: 20m, memory: 32Mi}, limits: {memory: 256Mi}}
+      core-command:
+        enabled: true
+        serviceName: edgex-core-command
+        initContainers:
+          - name: wait-core-metadata
+            image: docker.io/library/busybox:1.37
+            command: [sh, -c, "until nc -z edgex-core-metadata 59881; do echo waiting core-metadata; sleep 3; done"]
+        image: {repository: docker.io/edgexfoundry/core-command, tag: "4.0.2", pullPolicy: IfNotPresent}
+        args: [--registry, "-cp=keeper.http://edgex-core-keeper:59890"]
+        env:
+          - {name: EDGEX_SECURITY_SECRET_STORE, value: "false"}
+          - {name: SERVICE_HOST, value: edgex-core-command}
+          - {name: SERVICE_SERVERBINDADDR, value: "0.0.0.0"}
+          - {name: EXTERNALMQTT_URL, value: "tcp://edgex-mqtt-broker:1883"}
+          - {name: WRITABLE_INSECURESECRETS_DB_SECRETDATA_PASSWORD, valueFrom: {secretKeyRef: {name: "{{ .Values.edgex.dbExistingSecret }}", key: password}}}
+        ports: [{name: http, containerPort: 59882}]
+        readinessProbe: {httpGet: {path: /api/v3/ping, port: http}, periodSeconds: 10}
+        livenessProbe: {httpGet: {path: /api/v3/ping, port: http}, initialDelaySeconds: 120, periodSeconds: 20, failureThreshold: 6}
+        service: {enabled: true, ports: [{name: http, port: 59882}]}
+        resources: {requests: {cpu: 20m, memory: 32Mi}, limits: {memory: 256Mi}}
+      ui:
+        enabled: true
+        serviceName: edgex-ui-go
+        image: {repository: docker.io/edgexfoundry/edgex-ui, tag: "4.0.2", pullPolicy: IfNotPresent}
+        env:
+          - {name: EDGEX_SECURITY_SECRET_STORE, value: "false"}
+          - {name: SERVICE_HOST, value: edgex-ui-go}
+          - {name: SERVICE_SERVERBINDADDR, value: "0.0.0.0"}
+        ports: [{name: http, containerPort: 4000}]
+        service: {enabled: true, type: ClusterIP, ports: [{name: http, port: 4000}]}
+        resources: {requests: {cpu: 10m, memory: 32Mi}, limits: {memory: 128Mi}}
+  extraTemplates:
+    validate.yaml: |
+      {{- if not .Values.edgex.dbExistingSecret }}
+      {{- fail "edgex.dbExistingSecret 必填：含 password 鍵的 Secret（EdgeX 內部 PostgreSQL 密碼）" }}
+      {{- end }}
+  questions:
+    - {variable: edgex.dbExistingSecret, label: 資料庫密碼 Secret, description: "含 password 鍵", type: string, required: true, group: 資料庫}
+    - {variable: components.database.persistence.enabled, label: 資料庫持久化（PVC）, type: boolean, default: false, group: 資料庫}
+    - {variable: components.ui.enabled, label: 安裝 EdgeX UI, type: boolean, default: true, group: UI}
+    - {variable: components.ui.service.type, label: UI Service 類型, type: enum, options: [ClusterIP, NodePort], default: ClusterIP, group: UI}
+  ci:
+    edgex: {dbExistingSecret: edgex-db}
+  readme: |
+    - 服務名稱固定為 EdgeX 慣例（`edgex-core-keeper`、`edgex-core-metadata`…），**一個 namespace 只能裝一套**。
+    - 以 no-secty 模式啟動（與官方 `docker-compose-no-secty.yml` 對應）；內部 MQTT broker 不對外，靠 NetworkPolicy 只開 UI 與 core REST。
+    - Device Service（Modbus、REST、ONVIF…）與 app-service 依現場需求另裝，之後由 device-adapter-sdk（自研）產生。
+
+- name: edgeai-thingsboard
+  kind: self
+  version: 0.1.0
+  appVersion: "4.2.1"
+  display: ThingsBoard CE（選配）
+  pack: iot
+  categories: [Applications]
+  tier: Hub
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  licenseNote: 注意 ThingsBoard 商標與 PE 版功能界線。
+  upstreamHome: https://thingsboard.io
+  description: ThingsBoard CE 單機版（內建 PostgreSQL 的 tb-postgres 映像，IoT 儀表板）
+  values:
+    podSecurityContext: {fsGroup: 799}
+    networkPolicy:
+      allowedPorts: [{port: 9090}, {port: 1883}, {port: 7070}, {port: 5683, protocol: UDP}]
+    components:
+      thingsboard:
+        enabled: true
+        kind: StatefulSet
+        image: {repository: docker.io/thingsboard/tb-postgres, tag: "4.2.1", pullPolicy: IfNotPresent}
+        env:
+          - {name: TB_QUEUE_TYPE, value: in-memory}
+        ports:
+          - {name: http, containerPort: 9090}
+          - {name: mqtt, containerPort: 1883}
+          - {name: edge-rpc, containerPort: 7070}
+          - {name: coap, containerPort: 5683, protocol: UDP}
+        service:
+          enabled: true
+          type: ClusterIP
+          ports:
+            - {name: http, port: 9090}
+            - {name: mqtt, port: 1883}
+            - {name: edge-rpc, port: 7070}
+            - {name: coap, port: 5683, protocol: UDP}
+        startupProbe: {tcpSocket: {port: http}, periodSeconds: 10, failureThreshold: 60}
+        readinessProbe: {tcpSocket: {port: http}, periodSeconds: 10}
+        persistence: {enabled: true, mountPath: /data, size: 10Gi}
+        resources:
+          requests: {cpu: 500m, memory: 1Gi}
+          limits: {memory: 3Gi}
+    ingress: {enabled: false, component: thingsboard, servicePort: http}
+  questions:
+    - {variable: components.thingsboard.persistence.enabled, label: 資料持久化（PVC）, type: boolean, default: true, group: 儲存}
+    - {variable: components.thingsboard.persistence.size, label: PVC 大小, type: string, default: 10Gi, group: 儲存}
+    - {variable: components.thingsboard.service.type, label: Service 類型, type: enum, options: [ClusterIP, NodePort, LoadBalancer], default: ClusterIP, group: 網路}
+  readme: |
+    - 首次登入用 ThingsBoard 預設系統帳號（見官方文件），**登入後立刻改密碼**；本 chart 不帶任何帳密。
+    - 文件把 ThingsBoard 列為選配（EdgeX 為主），多節點／外部 PostgreSQL 請改用官方 K8s manifest。
+
+# ───────────────────────────── Vision／RAG（LLM／VLM） ─────────────────────────────
+- name: edgeai-vllm
+  kind: wrapper
+  version: 0.1.0
+  display: vLLM（production-stack）
+  pack: rag
+  categories: [Applications]
+  tier: Hub、Node
+  arch: amd64（Thor／Spark 需改用 NVIDIA 提供的 arm64 vLLM 映像）
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: vllm-stack, version: 0.1.14, repository: https://vllm-project.github.io/production-stack, home: https://docs.vllm.ai/projects/production-stack, note: "官方 chart"}
+  description: vLLM production-stack（OpenAI 相容 LLM／VLM 服務＋路由器，需 GPU）
+  values:
+    routerSpec:
+      serviceType: ClusterIP
+  questions:
+    - {variable: servingEngineSpec.enableEngine, label: 啟用推論引擎, type: boolean, default: true, group: 引擎}
+    - {variable: routerSpec.enableRouter, label: 啟用路由器, type: boolean, default: true, group: 路由器}
+    - {variable: routerSpec.serviceType, label: 路由器 Service 類型, type: enum, options: [ClusterIP, NodePort, LoadBalancer], default: ClusterIP, group: 路由器}
+  readme: |
+    模型清單在 `vllm-stack.servingEngineSpec.modelSpec`（陣列，Rancher 表單不適合填），請在 Rancher 安裝畫面切到 **Edit YAML** 填寫：`name`、`repository`、`tag`、`modelURL`、`requestGPU`；HF token 用 `hf_token.secretName`。
+
+- name: edgeai-open-webui
+  kind: wrapper
+  version: 0.1.0
+  display: Open WebUI
+  pack: rag
+  categories: [Applications]
+  tier: Hub
+  arch: amd64, arm64
+  license: Open WebUI License（BSD-3 衍生＋品牌條款，v0.6+）
+  licenseRisk: 中
+  licenseNote: 白牌／移除品牌需確認條款或替換前端；GA 前法務確認。
+  upstream: {name: open-webui, version: 18.4.0, repository: https://helm.openwebui.com/, home: https://openwebui.com, note: "官方 chart"}
+  description: Open WebUI（RAG／Assistant 前端，接 vLLM 或 LiteLLM）
+  values:
+    ollama: {enabled: false}
+    pipelines: {enabled: false}
+    openaiBaseApiUrl: http://edgeai-litellm.edgeai-rag.svc:4000/v1
+    persistence: {enabled: true, size: 5Gi}
+  questions:
+    - {variable: openaiBaseApiUrl, label: OpenAI 相容 API 位址, description: "LiteLLM 或 vLLM router 的 /v1", type: string, default: "http://edgeai-litellm.edgeai-rag.svc:4000/v1", group: 模型}
+    - {variable: ollama.enabled, label: 一併安裝 Ollama, type: boolean, default: false, group: 模型}
+    - {variable: persistence.enabled, label: 資料持久化（PVC）, type: boolean, default: true, group: 儲存}
+    - {variable: persistence.size, label: PVC 大小, type: string, default: 5Gi, group: 儲存}
+    - {variable: ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路}
+
+- name: edgeai-litellm
+  kind: wrapper
+  version: 0.1.0
+  display: LiteLLM Proxy
+  pack: rag
+  categories: [Applications]
+  tier: Hub
+  arch: amd64, arm64
+  license: MIT（enterprise/ 目錄除外）
+  licenseRisk: 低
+  licenseNote: 不啟用 enterprise 功能；Agent 稽核用其 logging。
+  upstream: {name: litellm-helm, version: 1.110.2, repository: oci://ghcr.io/berriai, home: https://docs.litellm.ai, note: "官方 chart（OCI）"}
+  description: LiteLLM（統一 LLM 閘道、金鑰／用量與 AI Agent 稽核日誌）
+  values:
+    masterkeySecretName: ""
+    masterkeySecretKey: masterkey
+  validate:
+    - {path: litellm-helm.masterkeySecretName, msg: "litellm-helm.masterkeySecretName 必填（含 masterkey 鍵的 Secret）"}
+  questions:
+    - {variable: masterkeySecretName, label: Master key Secret, description: "含 masterkey 鍵", type: string, required: true, group: 認證}
+    - {variable: db.deployStandalone, label: 一併部署 PostgreSQL, description: "子 chart 用 Bitnami 映像；正式站建議接 CloudNativePG", type: boolean, default: true, group: 資料庫}
+    - {variable: ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路}
+  ci:
+    litellm-helm: {masterkeySecretName: litellm-masterkey}
+
+- name: edgeai-qdrant
+  kind: wrapper
+  version: 0.1.0
+  display: Qdrant
+  pack: rag
+  categories: [Database]
+  tier: Hub、Node
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: qdrant, version: 1.20.2, repository: https://qdrant.github.io/qdrant-helm, home: https://qdrant.tech, note: "官方 chart"}
+  description: Qdrant 向量資料庫（RAG 知識庫、人物／事件向量搜尋）
+  values:
+    replicaCount: 1
+    persistence: {size: 10Gi}
+  questions:
+    - {variable: persistence.size, label: PVC 大小, type: string, default: 10Gi, group: 儲存}
+    - {variable: persistence.storageClassName, label: StorageClass, type: storageclass, group: 儲存}
+    - {variable: apiKey, label: 自動產生 API key, description: "true＝上游 chart 產生隨機 key 存成 Secret", type: boolean, default: false, group: 認證}
+
+# ───────────────────────────── MLOps ─────────────────────────────
+- name: edgeai-mlflow
+  kind: wrapper
+  version: 0.1.0
+  display: MLflow
+  pack: mlops
+  categories: [Applications]
+  tier: Hub
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: mlflow, version: 1.11.7, repository: https://community-charts.github.io/helm-charts, home: https://mlflow.org, note: "社群（community-charts）chart"}
+  description: MLflow Tracking／Model Registry（model-release-controller 的上游）
+  values:
+    artifactRoot: {proxiedArtifactStorage: true}
+  questions:
+    - {variable: backendStore.postgres.enabled, label: 後端用外部 PostgreSQL, type: boolean, default: false, group: 後端}
+    - {variable: artifactRoot.proxiedArtifactStorage, label: 由 MLflow 代理 artifact 存取, type: boolean, default: true, group: Artifact}
+    - {variable: service.type, label: Service 類型, type: enum, options: [ClusterIP, NodePort], default: ClusterIP, group: 網路}
+    - {variable: ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路}
+  readme: |
+    預設 backend 為 SQLite（單機試用）；正式站接 CloudNativePG（`backendStore.postgres.*` + `existingDatabaseSecret`），artifact 接 SeaweedFS S3（`artifactRoot.s3.*` + `existingSecret`）。
+
+- name: edgeai-cvat
+  kind: wrapper
+  version: 0.1.0
+  display: CVAT
+  pack: mlops
+  categories: [Applications]
+  tier: Hub
+  arch: amd64
+  license: MIT
+  licenseRisk: 低
+  upstream: {name: cvat, version: 2.83.0, repository: "", home: https://www.cvat.ai, note: "官方 chart 放在 cvat repo 的 helm-chart/（沒有 chart repo），以 v2.83.0 原樣 helm package 後放入"}
+  description: CVAT 標註平台（Model Flywheel 的難例標註佇列）
+  values:
+    analytics: {enabled: false}
+  questions:
+    - {variable: analytics.enabled, label: 啟用 analytics（ClickHouse＋Grafana＋Vector）, type: boolean, default: false, group: 元件}
+    - {variable: ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路, show_subquestion_if: true, subquestions: [{variable: ingress.hostname, label: 主機名稱, type: hostname, default: cvat.local}]}
+  readme: |
+    CVAT 的子 chart 含 Bitnami PostgreSQL／Redis（Bitnami 免費映像 2025-08 後改到 `bitnamilegacy`），資源需求高（建議 Hub ≥ 8 GiB 可用記憶體）。
+
+- name: edgeai-seaweedfs
+  kind: wrapper
+  version: 0.1.0
+  display: SeaweedFS（S3）
+  pack: platform
+  categories: [Storage]
+  tier: Hub
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: seaweedfs, version: 4.54.0, repository: https://seaweedfs.github.io/seaweedfs/helm, home: https://github.com/seaweedfs/seaweedfs, note: "官方 chart"}
+  description: SeaweedFS 物件儲存（S3 相容，MinIO 的 Apache-2.0 替代，平台預設）
+  values:
+    filer:
+      s3: {enabled: true}
+  questions:
+    - {variable: filer.s3.enabled, label: 開 S3 Gateway, type: boolean, default: true, group: S3}
+    - {variable: volume.replicas, label: Volume server 數, type: int, default: 1, group: 規模}
+  readme: |
+    v2 Roadmap §5 建議以 SeaweedFS 取代 MinIO（AGPL）。S3 帳密用上游的 `filer.s3.enableAuth` + `existingConfigSecret`，不要寫進 values。
+
+- name: edgeai-minio
+  kind: wrapper
+  version: 0.1.0
+  display: MinIO（選配，AGPL）
+  pack: platform
+  categories: [Storage]
+  tier: Hub
+  arch: amd64, arm64
+  license: AGPL-3.0
+  licenseRisk: 中高
+  licenseNote: 社群版功能縮減；上游 chart 5.4.0（2024-12）已停止更新。預設請用 edgeai-seaweedfs，或採購 MinIO 商業授權。
+  upstream: {name: minio, version: 5.4.0, repository: https://charts.min.io/, home: https://min.io, note: "官方 chart（已停止更新）"}
+  description: MinIO 物件儲存（選配；AGPL 授權風險）
+  values:
+    mode: standalone
+    replicas: 1
+    existingSecret: ""
+    persistence: {size: 50Gi}
+    resources: {requests: {memory: 1Gi}}
+  validate:
+    - {path: minio.existingSecret, msg: "minio.existingSecret 必填（含 rootUser／rootPassword 的 Secret）"}
+  questions:
+    - {variable: existingSecret, label: Root 帳密 Secret, description: "含 rootUser、rootPassword", type: string, required: true, group: 認證}
+    - {variable: persistence.size, label: PVC 大小, type: string, default: 50Gi, group: 儲存}
+  ci:
+    minio: {existingSecret: minio-root}
+
+# ───────────────────────────── Platform ─────────────────────────────
+- name: edgeai-harbor
+  kind: wrapper
+  version: 0.1.0
+  display: Harbor
+  pack: platform
+  categories: [Repository]
+  tier: Hub
+  arch: amd64（官方映像未提供 arm64）
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: harbor, version: 1.19.4, repository: https://helm.goharbor.io, home: https://goharbor.io, note: "官方 chart"}
+  description: Harbor 映像／OCI Artifact 倉庫（模型包、app-pack、cosign 簽章）
+  values:
+    expose:
+      type: clusterIP
+      tls: {enabled: false}
+    externalURL: https://harbor.example.com
+    existingSecretAdminPassword: ""
+    existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+    nodeSelector: {kubernetes.io/arch: amd64}
+  validate:
+    - {path: harbor.existingSecretAdminPassword, msg: "harbor.existingSecretAdminPassword 必填（避免上游預設管理者密碼）"}
+  questions:
+    - {variable: existingSecretAdminPassword, label: 管理者密碼 Secret, description: "鍵名 HARBOR_ADMIN_PASSWORD", type: string, required: true, group: 認證}
+    - {variable: externalURL, label: 對外 URL, type: string, required: true, default: "https://harbor.example.com", group: 網路}
+    - {variable: expose.type, label: 對外方式, type: enum, options: [clusterIP, nodePort, ingress, loadBalancer], default: clusterIP, group: 網路}
+    - {variable: persistence.enabled, label: 資料持久化（PVC）, type: boolean, default: true, group: 儲存}
+  ci:
+    harbor: {existingSecretAdminPassword: harbor-admin}
+
+- name: edgeai-gitea
+  kind: wrapper
+  version: 0.1.0
+  display: Gitea
+  pack: platform
+  categories: [Repository]
+  tier: Hub
+  arch: amd64, arm64
+  license: MIT
+  licenseRisk: 低
+  upstream: {name: gitea, version: 12.7.0, repository: https://dl.gitea.com/charts/, home: https://gitea.com, note: "官方 chart"}
+  description: Gitea（GitOps values repo，edge-app-catalog-controller 寫入）
+  values:
+    postgresql-ha: {enabled: false}
+    postgresql: {enabled: false}
+    valkey-cluster: {enabled: false}
+    valkey: {enabled: false}
+    gitea:
+      admin: {existingSecret: ""}
+      config:
+        database: {DB_TYPE: sqlite3}
+        session: {PROVIDER: memory}
+        cache: {ADAPTER: memory}
+        queue: {TYPE: level}
+    persistence: {enabled: true, size: 10Gi}
+  validate:
+    - {path: gitea.gitea.admin.existingSecret, msg: "gitea.gitea.admin.existingSecret 必填（含 username／password，避免上游預設管理者密碼）"}
+  questions:
+    - {variable: gitea.admin.existingSecret, label: 管理者 Secret, description: "含 username、password", type: string, required: true, group: 管理者}
+    - {variable: persistence.size, label: PVC 大小, type: string, default: 10Gi, group: 儲存}
+    - {variable: ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路}
+  ci:
+    gitea: {gitea: {admin: {existingSecret: gitea-admin}}}
+  readme: |
+    預設 SQLite＋記憶體 cache（單站 Hub 夠用、少一個資料庫要維運）；要 HA 時改開上游的 `postgresql-ha`／`valkey-cluster` 或接 CloudNativePG。
+
+- name: edgeai-argo-cd
+  kind: wrapper
+  version: 0.1.0
+  display: Argo CD（選配）
+  pack: platform
+  categories: [Infrastructure]
+  tier: Hub
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: argo-cd, version: 10.18.2, repository: https://argoproj.github.io/argo-helm, home: https://argo-cd.readthedocs.io, note: "官方 chart"}
+  description: Argo CD（GitOps；Rancher 已內建 Fleet，兩者擇一）
+  values:
+    dex: {enabled: false}
+    notifications: {enabled: false}
+  questions:
+    - {variable: server.service.type, label: Service 類型, type: enum, options: [ClusterIP, NodePort, LoadBalancer], default: ClusterIP, group: 網路}
+    - {variable: server.ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路}
+  readme: |
+    初始 admin 密碼由上游隨機產生在 `argocd-initial-admin-secret`。Rancher 已內建 Fleet，文件 C9 介面兩者皆可；同一叢集不要同時讓 Fleet 與 Argo 管同一批資源。
+
+- name: edgeai-cloudnative-pg
+  kind: wrapper
+  version: 0.1.0
+  display: CloudNativePG Operator
+  pack: platform
+  categories: [Database]
+  tier: Hub、Node
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: cloudnative-pg, version: 0.29.2, repository: https://cloudnative-pg.github.io/charts, home: https://cloudnative-pg.io, note: "官方 chart"}
+  description: CloudNativePG（PostgreSQL operator；自研模組、Keycloak、MLflow 的資料庫）
+  values: {}
+  questions:
+    - {variable: crds.create, label: 安裝 CRD, type: boolean, default: true, group: Operator}
+  readme: |
+    裝好 operator 後建立資料庫叢集（範例）：
+    ```yaml
+    apiVersion: postgresql.cnpg.io/v1
+    kind: Cluster
+    metadata: {name: pg, namespace: edgeai-platform}
+    spec:
+      instances: 1
+      storage: {size: 10Gi}
+    ```
+    密碼由 operator 產生在 `pg-app` Secret。HA（Hub Duo）把 `instances` 改 2～3。
+
+- name: edgeai-valkey
+  kind: wrapper
+  version: 0.1.0
+  display: Valkey
+  pack: platform
+  categories: [Database]
+  tier: Hub、Node
+  arch: amd64, arm64
+  license: BSD-3-Clause
+  licenseRisk: 低
+  licenseNote: Redis 7.4 起改 RSALv2／SSPL（8.0 加 AGPL），以 Valkey 取代。
+  upstream: {name: valkey, version: 1.0.0, repository: https://valkey.io/valkey-helm/, home: https://valkey.io, note: "官方 chart"}
+  description: Valkey（Redis 相容；sim-aaa-adapter AV 快取、event engine 去重）
+  values:
+    auth: {enabled: false}
+  questions:
+    - {variable: auth.enabled, label: 啟用 ACL 認證, type: boolean, default: false, group: 認證, show_subquestion_if: true, subquestions: [{variable: auth.usersExistingSecret, label: 使用者 Secret, type: string}]}
+    - {variable: persistence.enabled, label: 資料持久化（PVC）, type: boolean, default: false, group: 儲存}
+    - {variable: persistence.size, label: PVC 大小, type: string, default: 1Gi, group: 儲存}
+
+# ───────────────────────────── Observability ─────────────────────────────
+- name: edgeai-grafana
+  kind: wrapper
+  version: 0.1.0
+  display: Grafana（AGPL）
+  pack: observe
+  categories: [Monitoring]
+  tier: Hub
+  arch: amd64, arm64
+  license: AGPL-3.0
+  licenseRisk: 中
+  licenseNote: 不修改原始碼、保留 source offer 即合規；長期可評估 Perses。Rancher Monitoring 已內建一份 Grafana，這份給 Pack 儀表板／Console 嵌入用。
+  upstream: {name: grafana, version: 10.5.15, repository: https://grafana.github.io/helm-charts, home: https://grafana.com/oss/grafana/, note: "官方 chart"}
+  description: Grafana（Pack 儀表板，Console 以嵌入方式復用）
+  values:
+    admin: {existingSecret: "", userKey: admin-user, passwordKey: admin-password}
+    persistence: {enabled: false}
+  questions:
+    - {variable: admin.existingSecret, label: 管理者 Secret, description: "含 admin-user、admin-password；空白則上游隨機產生", type: string, group: 認證}
+    - {variable: persistence.enabled, label: 資料持久化（PVC）, type: boolean, default: false, group: 儲存}
+    - {variable: ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路}
+
+- name: edgeai-loki
+  kind: wrapper
+  version: 0.1.0
+  display: Loki（AGPL）
+  pack: observe
+  categories: [Monitoring]
+  tier: Hub
+  arch: amd64, arm64
+  license: AGPL-3.0
+  licenseRisk: 中
+  licenseNote: 同 Grafana；替代方案 edgeai-victoria（VictoriaLogs，Apache-2.0）。
+  upstream: {name: loki, version: 7.7.0, repository: https://grafana.github.io/helm-charts, home: https://grafana.com/oss/loki/, note: "官方 chart"}
+  description: Loki 日誌（SingleBinary＋filesystem，單站 Hub）
+  values:
+    deploymentMode: SingleBinary
+    loki:
+      auth_enabled: false
+      commonConfig: {replication_factor: 1}
+      storage: {type: filesystem}
+      schemaConfig:
+        configs:
+          - {from: "2024-04-01", store: tsdb, object_store: filesystem, schema: v13, index: {prefix: loki_index_, period: 24h}}
+    singleBinary: {replicas: 1}
+    read: {replicas: 0}
+    write: {replicas: 0}
+    backend: {replicas: 0}
+    chunksCache: {enabled: false}
+    resultsCache: {enabled: false}
+    lokiCanary: {enabled: false}
+    test: {enabled: false}
+  questions:
+    - {variable: singleBinary.persistence.size, label: PVC 大小, type: string, default: 10Gi, group: 儲存}
+
+- name: edgeai-victoria
+  kind: wrapper
+  version: 0.1.0
+  display: VictoriaMetrics＋VictoriaLogs
+  pack: observe
+  categories: [Monitoring]
+  tier: Hub
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream:
+    - {name: victoria-metrics-single, version: 0.51.0, repository: https://victoriametrics.github.io/helm-charts/, condition: victoria-metrics-single.enabled}
+    - {name: victoria-logs-single, version: 0.13.13, repository: https://victoriametrics.github.io/helm-charts/, condition: victoria-logs-single.enabled}
+  upstreamHome: https://victoriametrics.com
+  upstreamNote: 官方 chart（兩個 single 版合成一個安裝項）
+  description: VictoriaMetrics／VictoriaLogs（Prometheus 長留存與日誌，Grafana／Loki 的 Apache-2.0 替代）
+  values:
+    victoria-metrics-single: {enabled: true, server: {persistentVolume: {enabled: true, size: 20Gi}}}
+    victoria-logs-single: {enabled: true, server: {persistentVolume: {enabled: true, size: 20Gi}}}
+  questions:
+    - {variable: ^victoria-metrics-single.enabled, label: 安裝 VictoriaMetrics, type: boolean, default: true, group: 元件}
+    - {variable: ^victoria-metrics-single.server.persistentVolume.enabled, label: Metrics 持久化, type: boolean, default: true, group: 元件}
+    - {variable: ^victoria-logs-single.enabled, label: 安裝 VictoriaLogs, type: boolean, default: true, group: 元件}
+    - {variable: ^victoria-logs-single.server.persistentVolume.enabled, label: Logs 持久化, type: boolean, default: true, group: 元件}
+
+- name: edgeai-otel-collector
+  kind: wrapper
+  version: 0.1.0
+  display: OpenTelemetry Collector
+  pack: observe
+  categories: [Monitoring]
+  tier: Hub、Node、Gateway
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: opentelemetry-collector, version: 0.182.0, repository: https://open-telemetry.github.io/opentelemetry-helm-charts, home: https://opentelemetry.io, note: "官方 chart"}
+  description: OpenTelemetry Collector（各模組 telemetry-client 的收集點）
+  values:
+    mode: deployment
+    image: {repository: otel/opentelemetry-collector-k8s}
+  questions:
+    - {variable: mode, label: 部署模式, type: enum, options: [deployment, daemonset, statefulset], default: deployment, group: Collector}
+
+# ───────────────────────────── Security ─────────────────────────────
+- name: edgeai-kyverno
+  kind: wrapper
+  version: 0.1.0
+  display: Kyverno
+  pack: security
+  categories: [Security]
+  tier: Hub、Node、Gateway
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: kyverno, version: 3.10.0, repository: https://kyverno.github.io/kyverno/, home: https://kyverno.io, note: "官方 chart"}
+  description: Kyverno 準入策略（cosign verifyImages、default-deny 等平台策略）
+  values: {}
+  questions:
+    - {variable: admissionController.replicas, label: Admission controller 副本數, description: "單節點 1；HA 3", type: int, default: 1, group: 規模}
+  readme: |
+    策略（ClusterPolicy）不放在同一個 release（CRD 尚未建立時無法一起安裝），之後以 Pack 的 policy bundle 另外下發。
+
+- name: edgeai-trivy-operator
+  kind: wrapper
+  version: 0.1.0
+  display: Trivy Operator
+  pack: security
+  categories: [Security]
+  tier: Hub、Node
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: trivy-operator, version: 0.38.1, repository: https://aquasecurity.github.io/helm-charts/, home: https://aquasecurity.github.io/trivy-operator/, note: "官方 chart"}
+  description: Trivy Operator（叢集內映像弱點／組態掃描，CVE SLA 依據）
+  values:
+    operator: {scanJobsConcurrentLimit: 1}
+    trivy: {ignoreUnfixed: true}
+  questions:
+    - {variable: operator.scanJobsConcurrentLimit, label: 同時掃描 Job 數, type: int, default: 1, group: 掃描}
+    - {variable: trivy.ignoreUnfixed, label: 忽略尚無修補的 CVE, type: boolean, default: true, group: 掃描}
+  readme: |
+    弱點資料庫預設從網路下載（ghcr.io）；離線站點改指向 Harbor 內的鏡像（`trivy.dbRegistry`）。
+
+- name: edgeai-external-secrets
+  kind: wrapper
+  version: 0.1.0
+  display: External Secrets Operator
+  pack: security
+  categories: [Security]
+  tier: Hub、Node、Gateway
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: external-secrets, version: 2.15.0, repository: https://charts.external-secrets.io, home: https://external-secrets.io, note: "官方 chart"}
+  description: External Secrets（中央 Vault／KMS → 各站 Secret）
+  values: {}
+  questions:
+    - {variable: installCRDs, label: 安裝 CRD, type: boolean, default: true, group: Operator}
+
+- name: edgeai-velero
+  kind: wrapper
+  version: 0.1.0
+  display: Velero
+  pack: platform
+  categories: [Storage]
+  tier: Hub、Node
+  arch: amd64, arm64
+  license: Apache-2.0
+  licenseRisk: 低
+  upstream: {name: velero, version: 12.2.5, repository: https://vmware-tanzu.github.io/helm-charts, home: https://velero.io, note: "官方 chart"}
+  description: Velero 備份／還原（應用資料與 PV，上送 SeaweedFS／S3）
+  values:
+    credentials: {useSecret: true, existingSecret: ""}
+  questions:
+    - {variable: credentials.existingSecret, label: S3 憑證 Secret, description: "含 cloud 鍵（AWS credentials 檔格式）", type: string, group: 儲存位置}
+    - {variable: deployNodeAgent, label: 部署 node-agent（檔案層備份）, type: boolean, default: false, group: 備份}
+  readme: |
+    備份位置（`configuration.backupStorageLocation`）與 plugin（`initContainers`，例如 velero-plugin-for-aws）是陣列，請在 Rancher 安裝畫面用 **Edit YAML** 填寫；指向 edgeai-seaweedfs 的 S3。
+
+# ───────────────────────────── 既有 ─────────────────────────────
+# vlm-app 0.1.1 已在 charts/vlm-app/0.1.1（11/16 VLM-02 上架），本目錄不重產、不改動。

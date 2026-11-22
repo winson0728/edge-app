@@ -1,0 +1,17 @@
+# Rancher 安裝表單（Apps → Charts → Qdrant）
+questions:
+- variable: qdrant.persistence.size
+  label: PVC 大小
+  type: string
+  default: 10Gi
+  group: 儲存
+- variable: qdrant.persistence.storageClassName
+  label: StorageClass
+  type: storageclass
+  group: 儲存
+- variable: qdrant.apiKey
+  label: 自動產生 API key
+  description: true＝上游 chart 產生隨機 key 存成 Secret
+  type: boolean
+  default: false
+  group: 認證

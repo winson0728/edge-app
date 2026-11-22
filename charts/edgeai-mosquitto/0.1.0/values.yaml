@@ -1,0 +1,90 @@
+# Eclipse Mosquitto — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+nameOverride: ''
+fullnameOverride: ''
+imagePullSecrets: []
+podSecurityContext:
+  fsGroup: 1883
+nodeSelector:
+  kubernetes.io/os: linux
+tolerations: []
+affinity: {}
+networkPolicy:
+  enabled: true
+  allowedPorts:
+  - port: 1883
+  - port: 9001
+  allowFrom: []
+ingress:
+  enabled: false
+  className: ''
+  host: ''
+  tlsSecret: ''
+  annotations: {}
+  component: ''
+  servicePort: ''
+mqtt:
+  allowAnonymous: false
+  passwordSecret: ''
+  dynamicSecurity: false
+  websockets: false
+components:
+  mosquitto:
+    enabled: true
+    image:
+      repository: docker.io/library/eclipse-mosquitto
+      tag: 2.0.23
+      pullPolicy: IfNotPresent
+    ports:
+    - name: mqtt
+      containerPort: 1883
+    - name: ws
+      containerPort: 9001
+    service:
+      enabled: true
+      type: ClusterIP
+      ports:
+      - name: mqtt
+        port: 1883
+      - name: ws
+        port: 9001
+    readinessProbe:
+      tcpSocket:
+        port: mqtt
+      periodSeconds: 10
+    config:
+      mountPath: /mosquitto/config
+      files:
+        mosquitto.conf: |
+          persistence true
+          persistence_location /mosquitto/data/
+          log_dest stdout
+          per_listener_settings false
+          listener 1883
+          {{- if .Values.mqtt.websockets }}
+          listener 9001
+          protocol websockets
+          {{- end }}
+          allow_anonymous {{ .Values.mqtt.allowAnonymous }}
+          {{- if .Values.mqtt.passwordSecret }}
+          password_file /mosquitto/secret/passwd
+          {{- end }}
+          {{- if .Values.mqtt.dynamicSecurity }}
+          plugin /usr/lib/mosquitto_dynamic_security.so
+          plugin_opt_config_file /mosquitto/data/dynamic-security.json
+          {{- end }}
+    secretMounts:
+    - secretName: '{{ .Values.mqtt.passwordSecret }}'
+      mountPath: /mosquitto/secret
+      defaultMode: 288
+    persistence:
+      enabled: false
+      mountPath: /mosquitto/data
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        memory: 256Mi

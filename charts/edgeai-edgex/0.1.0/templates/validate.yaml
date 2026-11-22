@@ -1,0 +1,3 @@
+{{- if not .Values.edgex.dbExistingSecret }}
+{{- fail "edgex.dbExistingSecret 必填：含 password 鍵的 Secret（EdgeX 內部 PostgreSQL 密碼）" }}
+{{- end }}

@@ -1,0 +1,28 @@
+# Rancher 安裝表單（Apps → Charts → Open WebUI）
+questions:
+- variable: open-webui.openaiBaseApiUrl
+  label: OpenAI 相容 API 位址
+  description: LiteLLM 或 vLLM router 的 /v1
+  type: string
+  default: http://edgeai-litellm.edgeai-rag.svc:4000/v1
+  group: 模型
+- variable: open-webui.ollama.enabled
+  label: 一併安裝 Ollama
+  type: boolean
+  default: false
+  group: 模型
+- variable: open-webui.persistence.enabled
+  label: 資料持久化（PVC）
+  type: boolean
+  default: true
+  group: 儲存
+- variable: open-webui.persistence.size
+  label: PVC 大小
+  type: string
+  default: 5Gi
+  group: 儲存
+- variable: open-webui.ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路

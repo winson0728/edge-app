@@ -1,0 +1,29 @@
+apiVersion: v2
+name: edgeai-harbor
+description: Harbor 映像／OCI Artifact 倉庫（模型包、app-pack、cosign 簽章）
+type: application
+version: 0.1.0
+appVersion: 2.15.4
+kubeVersion: '>=1.28.0-0'
+home: https://goharbor.io
+keywords:
+- edge-ai
+- pack-platform
+- Repository
+dependencies:
+- name: harbor
+  version: 1.19.4
+  repository: https://helm.goharbor.io
+annotations:
+  catalog.cattle.io/display-name: Harbor
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-harbor
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64（官方映像未提供 arm64）
+  edge-ai/license: Apache-2.0
+  edge-ai/chart-kind: upstream-wrapper
