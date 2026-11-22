@@ -1,0 +1,26 @@
+apiVersion: v2
+name: edgeai-model-release-controller
+description: MLflow → Triton 安全上架（按 GPU 世代建 TensorRT engine、benchmark Gate、cosign 簽章、shadow／promote／rollback）
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/winson0728/edge-app
+keywords:
+- edge-ai
+- pack-mlops
+- skeleton
+- Applications
+annotations:
+  catalog.cattle.io/display-name: model-release-controller（骨架）
+  catalog.cattle.io/certified: MLOps
+  catalog.cattle.io/namespace: edgeai-mlops
+  catalog.cattle.io/release-name: edgeai-model-release-controller
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: MLOps
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: 自研（專有）
+  edge-ai/chart-kind: skeleton

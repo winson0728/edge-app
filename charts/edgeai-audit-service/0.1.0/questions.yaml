@@ -1,0 +1,28 @@
+# Rancher 安裝表單（Apps → Charts → edge-audit-service）
+questions:
+- variable: components.app.image.repository
+  label: 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  description: DB_USER、DB_PASSWORD、S3_ACCESS_KEY、S3_SECRET_KEY
+  type: string
+  group: 秘密
+- variable: audit.retentionDays
+  label: 保留天數
+  type: int
+  default: 365
+  group: 稽核
+- variable: components.app.persistence.enabled
+  label: 本地 spool 持久化（PVC）
+  description: 斷線時緩衝稽核事件，建議開
+  type: boolean
+  default: true
+  group: 儲存

@@ -1,0 +1,45 @@
+# Rancher 安裝表單（Apps → Charts → edge-portal-ui（EdgeOne Console））
+questions:
+- variable: components.ui.image.repository
+  label: UI 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.ui.image.tag
+  label: UI 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: components.bff.image.repository
+  label: BFF 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.bff.image.tag
+  label: BFF 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  description: OIDC_CLIENT_SECRET、SESSION_KEY
+  type: string
+  group: 秘密
+- variable: portal.oidcIssuer
+  label: OIDC Issuer
+  type: string
+  default: https://keycloak.example.com/realms/edge-ai
+  group: 登入
+- variable: ingress.enabled
+  label: 啟用 Ingress
+  type: boolean
+  default: false
+  group: 網路
+  show_subquestion_if: true
+  subquestions:
+  - variable: ingress.host
+    label: 主機名稱
+    type: hostname
+  - variable: ingress.tlsSecret
+    label: TLS Secret
+    type: string

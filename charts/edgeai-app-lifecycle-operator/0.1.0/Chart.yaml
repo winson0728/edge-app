@@ -1,0 +1,26 @@
+apiVersion: v2
+name: edgeai-app-lifecycle-operator
+description: 每叢集的 App 生命週期 operator（EdgeApp CR：安裝／升級／回滾，GitOps 或 air-gap 模式）
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/winson0728/edge-app
+keywords:
+- edge-ai
+- pack-platform
+- skeleton
+- Infrastructure
+annotations:
+  catalog.cattle.io/display-name: app-lifecycle-operator（骨架）
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-app-lifecycle-operator
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub、Node、Gateway（每個受管叢集一份）
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: 自研（專有）
+  edge-ai/chart-kind: skeleton

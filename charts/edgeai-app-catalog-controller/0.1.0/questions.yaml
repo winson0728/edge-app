@@ -1,0 +1,27 @@
+# Rancher 安裝表單（Apps → Charts → edge-app-catalog-controller）
+questions:
+- variable: components.app.image.repository
+  label: 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  description: GITEA_TOKEN、REGISTRY_PASSWORD 等
+  type: string
+  group: 秘密
+- variable: catalog.giteaUrl
+  label: Gitea 位置
+  type: string
+  default: http://edgeai-gitea-http.edgeai-platform.svc:3000
+  group: GitOps
+- variable: catalog.registry
+  label: Pack 倉庫
+  type: string
+  default: harbor.example.com/edgeai-packs
+  group: GitOps

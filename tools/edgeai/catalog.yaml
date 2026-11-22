@@ -1420,3 +1420,731 @@ charts:
 
 # ───────────────────────────── 既有 ─────────────────────────────
 # vlm-app 0.1.1 已在 charts/vlm-app/0.1.1（11/16 VLM-02 上架），本目錄不重產、不改動。
+
+# ═════════════════════════ Layer 2 自研模組：骨架 chart ═════════════════════════
+# skeleton: true → 加 ServiceAccount／RBAC 樣板、display-name 加「（骨架）」、映像位置必填。
+# 共同約定：http 8080（/healthz、/readyz）、metrics 9090；設定檔掛在 /etc/edgeai/config.yaml；
+# 秘密一律從 Secret 以環境變數帶入（existingSecret，空白則用 <release>-<chart>-secrets，optional）。
+- name: edgeai-sim-aaa-adapter
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: sim-aaa-adapter
+  pack: access
+  categories: [Security, Networking]
+  tier: Hub（＋Node Survival 副本）
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: Wi-Fi EAP-AKA／AKA′ 與 Harmony UDM／AUSF 介接（只做認證：AV 取得、SQN resync、pseudonym／fast re-auth）
+  values:
+    networkPolicy:
+      allowedPorts: [{port: 8080}]
+      allowFrom:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: edgeai-access}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: edgeai-freeradius}}
+    adapter:
+      anid: WLAN
+      mcc: "001"
+      mnc: "01"
+      avPrefetch: 5
+      udmUrl: https://udm.example.internal
+      redisUrl: redis://edgeai-valkey.edgeai-platform.svc:6379
+      requestTimeoutMs: 1000
+    components:
+      app: &skel
+        enabled: true
+        replicas: 2
+        image: {repository: "", tag: "", pullPolicy: IfNotPresent}
+        env:
+          - {name: EDGEAI_CONFIG, value: /etc/edgeai/config.yaml}
+        envFrom:
+          - secretRef: {name: '{{ .Values.existingSecret | default (printf "%s-secrets" (include "eai.fullname" .)) }}', optional: true}
+        ports:
+          - {name: http, containerPort: 8080}
+          - {name: metrics, containerPort: 9090}
+        service:
+          enabled: true
+          type: ClusterIP
+          ports:
+            - {name: http, port: 8080}
+            - {name: metrics, port: 9090}
+        livenessProbe: {httpGet: {path: /healthz, port: http}, initialDelaySeconds: 10, periodSeconds: 20}
+        readinessProbe: {httpGet: {path: /readyz, port: http}, periodSeconds: 10}
+        securityContext:
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities: {drop: [ALL]}
+        resources:
+          requests: {cpu: 50m, memory: 64Mi}
+          limits: {memory: 256Mi}
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              # sim-aaa-adapter 設定（金鑰材料不在這裡：Ki/OPc 永不經手；UDM 憑證與 token 走 Secret）
+              eapAka:
+                anid: {{ .Values.adapter.anid | quote }}
+                realm: "wlan.mnc{{ printf "%03s" .Values.adapter.mnc }}.mcc{{ .Values.adapter.mcc }}.3gppnetwork.org"
+                avPrefetch: {{ .Values.adapter.avPrefetch }}
+              udm:
+                url: {{ .Values.adapter.udmUrl | quote }}
+                timeoutMs: {{ .Values.adapter.requestTimeoutMs }}
+              cache:
+                redisUrl: {{ .Values.adapter.redisUrl | quote }}
+  questions: &skelq
+    - {variable: components.app.image.repository, label: 映像位置, description: "自研模組尚無映像，請填 Harbor 位置（例如 harbor.local/edgeai/sim-aaa-adapter）", type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, description: "以環境變數帶入（UDM token、Redis 密碼等）；空白則讀 <release>-<chart>-secrets", type: string, group: 秘密}
+  ci: &skelci
+    components: {app: {image: {repository: registry.example/edgeai/skeleton, tag: 0.1.0}}}
+  readme: |
+    介面：C1 `POST /v1/auth/vectors`、`/v1/auth/resync`、`/v1/auth/result`（FreeRADIUS rlm_python3 呼叫，逾時 1s）。
+    NetworkPolicy 只放行 `edgeai-access` namespace 內的 FreeRADIUS。Secret 建議鍵：`UDM_TOKEN`、`REDIS_PASSWORD`；UDM mTLS 憑證另以 Secret 掛載（待實作）。
+
+- name: edgeai-access-policy-service
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: access-policy-service
+  pack: access
+  categories: [Security, Networking]
+  tier: Hub（＋Node 決策快取）
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: 統一 5G／Wi-Fi／有線授權政策（PDP、session registry、CoA、Policy Bundle、下游 MQTT ACL／Keycloak／5GC 同步）
+  values:
+    policy:
+      failMode: close
+      quarantineVlan: "999"
+      databaseHost: pg-rw.edgeai-platform.svc
+      mosquittoDynsecUrl: mqtt://edgeai-mosquitto-mosquitto.edgeai-iot.svc:1883
+      keycloakUrl: http://edgeai-keycloak-http.edgeai-access.svc
+    networkPolicy:
+      allowedPorts: [{port: 8080}]
+      allowFrom:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: edgeai-access}}
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: edgeai-platform}}
+    components:
+      app:
+        <<: *skel
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              decision:
+                failMode: {{ .Values.policy.failMode }}        # close＝不可達時 FreeRADIUS 丟隔離 VLAN
+                quarantineVlan: {{ .Values.policy.quarantineVlan | quote }}
+              database:
+                host: {{ .Values.policy.databaseHost | quote }}  # 帳密走 Secret：DB_USER／DB_PASSWORD
+              downstream:
+                mosquittoDynsec: {{ .Values.policy.mosquittoDynsecUrl | quote }}
+                keycloak: {{ .Values.policy.keycloakUrl | quote }}
+              coa:
+                port: 3799
+  questions:
+    - {variable: components.app.image.repository, label: 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, description: "DB_USER、DB_PASSWORD、KEYCLOAK_CLIENT_SECRET 等；空白則讀 <release>-<chart>-secrets", type: string, group: 秘密}
+    - {variable: policy.failMode, label: 決策失效行為, type: enum, options: [close, open], default: close, group: 政策}
+    - {variable: policy.quarantineVlan, label: 隔離 VLAN, type: string, default: "999", group: 政策}
+    - {variable: policy.databaseHost, label: PostgreSQL 主機, type: string, default: pg-rw.edgeai-platform.svc, group: 資料庫}
+  ci: *skelci
+  readme: |
+    介面：C2 `POST /v1/decision`（P95 ≤ 50ms）、C3 CoA／Disconnect（RFC 5176，往 NAS UDP 3799）、C4 下游同步。
+    政策以版本化 Policy Bundle（YAML）匯入匯出，之後可用 ConfigMap／GitOps 下發。
+
+- name: edgeai-app-catalog-controller
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: edge-app-catalog-controller
+  pack: platform
+  categories: [Infrastructure]
+  tier: Hub
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: App Catalog（AppPack 目錄、preflight、授權 JWT 驗證、GitOps values commit；ZTP／OTA 子系統掛點）
+  values:
+    catalog:
+      giteaUrl: http://edgeai-gitea-http.edgeai-platform.svc:3000
+      registry: harbor.example.com/edgeai-packs
+    rbac:
+      create: true
+      clusterWide: true
+      rules:
+        - {apiGroups: [catalog.edgeai.internal], resources: [apppacks, apppacks/status, edgeapps, edgeapps/status], verbs: [get, list, watch, create, update, patch, delete]}
+        - {apiGroups: [""], resources: [nodes], verbs: [get, list, watch]}
+        - {apiGroups: [""], resources: [events], verbs: [create, patch]}
+    components:
+      app:
+        <<: *skel
+        replicas: 1
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              catalog:
+                registry: {{ .Values.catalog.registry | quote }}   # app-pack（OCI Artifact）
+              gitops:
+                giteaUrl: {{ .Values.catalog.giteaUrl | quote }}   # token 走 Secret：GITEA_TOKEN
+              entitlement:
+                publicKeyPath: /etc/edgeai/license/cosign.pub      # 授權 JWT 驗簽公鑰（待以 Secret 掛載）
+  crds:
+    apppacks.catalog.edgeai.internal.yaml: |
+      apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      metadata:
+        name: apppacks.catalog.edgeai.internal
+        annotations:
+          edge-ai/stage: skeleton
+      spec:
+        group: catalog.edgeai.internal
+        scope: Cluster
+        names: {kind: AppPack, listKind: AppPackList, plural: apppacks, singular: apppack, shortNames: [apk]}
+        versions:
+          - name: v1alpha1
+            served: true
+            storage: true
+            subresources: {status: {}}
+            additionalPrinterColumns:
+              - {name: Version, type: string, jsonPath: .spec.version}
+              - {name: Ref, type: string, jsonPath: .spec.ref}
+            schema:
+              openAPIV3Schema:
+                type: object
+                properties:
+                  spec:
+                    type: object
+                    description: app-pack 目錄項（文件 §3.3：chart、pack.yaml 需求、questions.schema、values.map、validation、observability、entitlement）
+                    properties:
+                      ref: {type: string, description: "OCI 位置，例如 oci://harbor/edgeai-packs/yolo-safety"}
+                      version: {type: string}
+                      requires:
+                        type: object
+                        properties:
+                          gpu: {type: array, items: {type: string}}
+                          minVram: {type: string}
+                          k3s: {type: string}
+                          storage: {type: string}
+                          dependsOn: {type: array, items: {type: string}}
+                        x-kubernetes-preserve-unknown-fields: true
+                      entitlement:
+                        type: object
+                        x-kubernetes-preserve-unknown-fields: true
+                    x-kubernetes-preserve-unknown-fields: true
+                  status:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+  questions:
+    - {variable: components.app.image.repository, label: 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, description: "GITEA_TOKEN、REGISTRY_PASSWORD 等", type: string, group: 秘密}
+    - {variable: catalog.giteaUrl, label: Gitea 位置, type: string, default: "http://edgeai-gitea-http.edgeai-platform.svc:3000", group: GitOps}
+    - {variable: catalog.registry, label: Pack 倉庫, type: string, default: harbor.example.com/edgeai-packs, group: GitOps}
+  ci: *skelci
+  readme: |
+    CRD `AppPack`（`catalog.edgeai.internal/v1alpha1`，叢集範圍）隨 chart 的 `crds/` 安裝；Helm 不會在升級或移除時改動 CRD。
+    `EdgeApp` CRD 由每個受管叢集的 edgeai-app-lifecycle-operator 提供。API group 用 `.internal`（私用保留網域），GA 前確認正式名稱。
+
+- name: edgeai-app-lifecycle-operator
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: app-lifecycle-operator
+  pack: platform
+  categories: [Infrastructure]
+  tier: Hub、Node、Gateway（每個受管叢集一份）
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: 每叢集的 App 生命週期 operator（EdgeApp CR：安裝／升級／回滾，GitOps 或 air-gap 模式）
+  values:
+    operator:
+      mode: gitops
+    networkPolicy:
+      allowedPorts: [{port: 9090}]
+    rbac:
+      create: true
+      clusterWide: true
+      rules:
+        - {apiGroups: [catalog.edgeai.internal], resources: [edgeapps, edgeapps/status, edgeapps/finalizers], verbs: [get, list, watch, create, update, patch, delete]}
+        - {apiGroups: [""], resources: [configmaps, secrets, namespaces, events], verbs: [get, list, watch, create, update, patch]}
+        - {apiGroups: [""], resources: [nodes], verbs: [get, list, watch]}
+    components:
+      app:
+        <<: *skel
+        replicas: 1
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              mode: {{ .Values.operator.mode }}   # gitops＝commit values 到 Gitea 交給 Argo／Fleet；airgap＝Helm SDK 直接安裝（需更大 RBAC）
+              history: 10
+  crds:
+    edgeapps.catalog.edgeai.internal.yaml: |
+      apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      metadata:
+        name: edgeapps.catalog.edgeai.internal
+        annotations:
+          edge-ai/stage: skeleton
+      spec:
+        group: catalog.edgeai.internal
+        scope: Namespaced
+        names: {kind: EdgeApp, listKind: EdgeAppList, plural: edgeapps, singular: edgeapp}
+        versions:
+          - name: v1alpha1
+            served: true
+            storage: true
+            subresources: {status: {}}
+            additionalPrinterColumns:
+              - {name: Pack, type: string, jsonPath: .spec.packRef}
+              - {name: Version, type: string, jsonPath: .spec.version}
+              - {name: Phase, type: string, jsonPath: .status.phase}
+            schema:
+              openAPIV3Schema:
+                type: object
+                properties:
+                  spec:
+                    type: object
+                    properties:
+                      packRef: {type: string}
+                      version: {type: string}
+                      site: {type: string}
+                      tenant: {type: string}
+                      revision: {type: integer, description: "回滾用"}
+                      answers: {type: object, x-kubernetes-preserve-unknown-fields: true}
+                    required: [packRef, version]
+                  status:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+  questions:
+    - {variable: components.app.image.repository, label: 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, type: string, group: 秘密}
+    - {variable: operator.mode, label: 部署模式, type: enum, options: [gitops, airgap], default: gitops, group: Operator}
+  ci: *skelci
+  readme: |
+    air-gap 模式要以 Helm SDK 直接安裝 App，需要的 RBAC 遠大於骨架預設（目前只給 EdgeApp、ConfigMap、Secret、Namespace）；實作時依實際安裝範圍收斂，不建議直接給 cluster-admin。
+
+- name: edgeai-unified-event-engine
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: unified-event-engine
+  pack: platform
+  categories: [Applications]
+  tier: Hub、Node
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: AI／IoT／PTT／網路事件編排（CloudEvents 驗證、去重、關聯、CEL 規則、動作派送、升級鏈、Incident Timeline）
+  values:
+    events:
+      mqttUrl: mqtt://edgeai-mosquitto-mosquitto.edgeai-iot.svc:1883
+      redisUrl: redis://edgeai-valkey.edgeai-platform.svc:6379
+      databaseHost: pg-rw.edgeai-platform.svc
+      pttGatewayUrl: http://edgeai-ptt-gateway-app.edgeai-voice.svc:8080
+    networkPolicy:
+      allowedPorts: [{port: 8080}]
+    components:
+      app:
+        <<: *skel
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              ingest:
+                mqtt: {{ .Values.events.mqttUrl | quote }}
+                topics: ["edge/+/+/events/#"]
+                dlqTopic: edge/_dlq
+              state:
+                redis: {{ .Values.events.redisUrl | quote }}
+                database: {{ .Values.events.databaseHost | quote }}
+              actions:
+                pttGateway: {{ .Values.events.pttGatewayUrl | quote }}
+              rulesDir: /etc/edgeai
+            rules.yaml: |
+              # 規則範例（宣告式 YAML＋CEL）；正式規則以 GitOps 下發
+              - name: restricted-zone-intrusion
+                when: "event.type == 'restricted_zone_intrusion' && event.data.severity >= 3"
+                actions:
+                  - {type: ptt-broadcast, group: security, tts: "倉庫 A 禁區有人員進入"}
+                escalation:
+                  - {afterMinutes: 5, action: {type: webhook, target: duty-manager}}
+  questions:
+    - {variable: components.app.image.repository, label: 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, description: "MQTT／Redis／DB 帳密、Webhook token", type: string, group: 秘密}
+    - {variable: events.mqttUrl, label: MQTT broker, type: string, default: "mqtt://edgeai-mosquitto-mosquitto.edgeai-iot.svc:1883", group: 連線}
+    - {variable: events.redisUrl, label: Redis（Valkey）, type: string, default: "redis://edgeai-valkey.edgeai-platform.svc:6379", group: 連線}
+  ci: *skelci
+  readme: |
+    介面：C5 MQTT／HTTP（CloudEvents，schema 失敗進 DLQ）、C6 `POST /v1/broadcast` 到 ptt-gateway。規則檔在 `components.app.config.files.rules.yaml`。
+
+- name: edgeai-ptt-gateway
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: ptt-gateway
+  pack: voice
+  categories: [Applications]
+  tier: Hub、Node（Survivable）
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: 企業 PTT 控制層（群組、floor control、優先權／緊急搶占、事件臨時群組；媒體面交給 Asterisk ARI）
+  values:
+    ptt:
+      ariUrl: http://asterisk.edgeai-voice.svc:8088/ari
+      speakerTimeoutSeconds: 30
+    networkPolicy:
+      allowedPorts: [{port: 8080}, {port: 8081}]
+    components:
+      app:
+        <<: *skel
+        replicas: 1
+        ports:
+          - {name: http, containerPort: 8080}
+          - {name: ws, containerPort: 8081}
+          - {name: metrics, containerPort: 9090}
+        service:
+          enabled: true
+          type: ClusterIP
+          ports:
+            - {name: http, port: 8080}
+            - {name: ws, port: 8081}
+            - {name: metrics, port: 9090}
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              asterisk:
+                ariUrl: {{ .Values.ptt.ariUrl | quote }}   # ARI 帳密走 Secret：ARI_USER／ARI_PASSWORD
+              floor:
+                speakerTimeoutSeconds: {{ .Values.ptt.speakerTimeoutSeconds }}
+                priorities: 4
+  questions:
+    - {variable: components.app.image.repository, label: 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, description: "ARI_USER、ARI_PASSWORD", type: string, group: 秘密}
+    - {variable: ptt.ariUrl, label: Asterisk ARI 位置, type: string, default: "http://asterisk.edgeai-voice.svc:8088/ari", group: Asterisk}
+    - {variable: components.app.service.type, label: Service 類型, description: "PTT App 在叢集外時用 NodePort／LoadBalancer", type: enum, options: [ClusterIP, NodePort, LoadBalancer], default: ClusterIP, group: 網路}
+  ci: *skelci
+  readme: |
+    floor control 走 WebSocket（8081）；edgeai-asterisk 用 hostNetwork，`ptt.ariUrl` 請填節點位址或另建指向節點的 Service。單一 replica（群組狀態機在記憶體），HA 待設計。
+
+- name: edgeai-ai-workflow-controller
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: ai-workflow-controller
+  pack: vision
+  categories: [Applications]
+  tier: Node、Hub
+  arch: amd64, arm64（ds-worker 只有 Jetson／arm64）
+  license: 自研（專有）
+  licenseRisk: 低
+  description: Vision Pipeline 編排（VisionPipeline CR、Camera 註冊、YOLO 偵測→VLM 覆核、VLM 預算、Privacy 遮罩、Evidence）
+  values:
+    workflow:
+      mediamtxApi: http://edgeai-mediamtx-mediamtx.edgeai-vision.svc:9997
+      tritonUrl: edgeai-triton-triton.edgeai-vision.svc:8001
+      vlmUrl: http://edgeai-vllm-router-service.edgeai-rag.svc/v1
+      vlmMaxConcurrent: 2
+    workers:
+      ds: {repository: "", tag: ""}
+      gst: {repository: "", tag: ""}
+    rbac:
+      create: true
+      clusterWide: false
+      rules:
+        - {apiGroups: [vision.edgeai.internal], resources: [visionpipelines, visionpipelines/status], verbs: [get, list, watch, update, patch]}
+        - {apiGroups: [apps], resources: [deployments], verbs: [get, list, watch, create, update, patch, delete]}
+        - {apiGroups: [""], resources: [configmaps, secrets, events], verbs: [get, list, watch, create, update, patch]}
+    components:
+      app:
+        <<: *skel
+        replicas: 1
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              media:
+                mediamtxApi: {{ .Values.workflow.mediamtxApi | quote }}
+              inference:
+                triton: {{ .Values.workflow.tritonUrl | quote }}
+                vlm: {{ .Values.workflow.vlmUrl | quote }}
+                vlmBudget: {maxConcurrent: {{ .Values.workflow.vlmMaxConcurrent }}}
+              workers:
+                dsImage: "{{ .Values.workers.ds.repository }}:{{ .Values.workers.ds.tag }}"     # DeepStream（Jetson）
+                gstImage: "{{ .Values.workers.gst.repository }}:{{ .Values.workers.gst.tag }}"   # GStreamer＋Triton client（通用）
+  crds:
+    visionpipelines.vision.edgeai.internal.yaml: |
+      apiVersion: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      metadata:
+        name: visionpipelines.vision.edgeai.internal
+        annotations:
+          edge-ai/stage: skeleton
+      spec:
+        group: vision.edgeai.internal
+        scope: Namespaced
+        names: {kind: VisionPipeline, listKind: VisionPipelineList, plural: visionpipelines, singular: visionpipeline, shortNames: [vp]}
+        versions:
+          - name: v1alpha1
+            served: true
+            storage: true
+            subresources: {status: {}}
+            schema:
+              openAPIV3Schema:
+                type: object
+                properties:
+                  spec:
+                    type: object
+                    description: 文件 §3.6：source、zones、detector、tracker、triggers、vlm（含 budget）、privacy、output
+                    properties:
+                      source: {type: object, x-kubernetes-preserve-unknown-fields: true}
+                      zones: {type: array, items: {type: object, x-kubernetes-preserve-unknown-fields: true}}
+                      detector: {type: object, x-kubernetes-preserve-unknown-fields: true}
+                      tracker: {type: object, x-kubernetes-preserve-unknown-fields: true}
+                      triggers: {type: array, items: {type: object, x-kubernetes-preserve-unknown-fields: true}}
+                      vlm: {type: object, x-kubernetes-preserve-unknown-fields: true}
+                      privacy: {type: object, x-kubernetes-preserve-unknown-fields: true}
+                      output: {type: object, x-kubernetes-preserve-unknown-fields: true}
+                  status:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+  questions:
+    - {variable: components.app.image.repository, label: Controller 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: Controller 映像 tag, type: string, required: true, group: 映像}
+    - {variable: workers.ds.repository, label: ds-worker 映像（Jetson）, type: string, group: Worker}
+    - {variable: workers.ds.tag, label: ds-worker tag, type: string, group: Worker}
+    - {variable: workers.gst.repository, label: gst-worker 映像（通用）, type: string, group: Worker}
+    - {variable: workers.gst.tag, label: gst-worker tag, type: string, group: Worker}
+    - {variable: existingSecret, label: 秘密 Secret, description: "Camera 憑證另以 Secret 存放（ONVIF 探索後由 controller 建立）", type: string, group: 秘密}
+    - {variable: workflow.vlmMaxConcurrent, label: VLM 最大併發, description: "VRAM 保護的硬性預算", type: int, default: 2, group: 推論}
+  ci: *skelci
+  readme: |
+    介面：C8 Triton gRPC／vLLM OpenAI 相容 API。worker 由 controller 依節點類型動態建立 Deployment（因此 RBAC 只給本 namespace 的 deployments）。
+
+- name: edgeai-model-release-controller
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: model-release-controller
+  pack: mlops
+  categories: [Applications]
+  tier: Hub
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: MLflow → Triton 安全上架（按 GPU 世代建 TensorRT engine、benchmark Gate、cosign 簽章、shadow／promote／rollback）
+  values:
+    release:
+      mlflowUrl: http://edgeai-mlflow.edgeai-mlops.svc:5000
+      registry: harbor.example.com/edgeai-models
+      runnerPools:
+        orin: {nodeSelector: {edge-ai/gpu-gen: orin}}
+        thor: {nodeSelector: {edge-ai/gpu-gen: thor}}
+        rtx-pro: {nodeSelector: {edge-ai/gpu-gen: rtx-pro}}
+        spark: {nodeSelector: {edge-ai/gpu-gen: spark}}
+    rbac:
+      create: true
+      clusterWide: false
+      rules:
+        - {apiGroups: [batch], resources: [jobs], verbs: [get, list, watch, create, delete]}
+        - {apiGroups: [""], resources: [pods, pods/log], verbs: [get, list, watch]}
+        - {apiGroups: [""], resources: [configmaps, events], verbs: [get, list, watch, create, update, patch]}
+    components:
+      app:
+        <<: *skel
+        replicas: 1
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              mlflow: {{ .Values.release.mlflowUrl | quote }}
+              registry: {{ .Values.release.registry | quote }}     # 帳密走 Secret：REGISTRY_USER／REGISTRY_PASSWORD
+              runnerPools: {{ toJson .Values.release.runnerPools }}
+              gates:
+                maxMapDropPercent: 1
+  questions:
+    - {variable: components.app.image.repository, label: 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, description: "REGISTRY_USER、REGISTRY_PASSWORD、COSIGN_KEY 等", type: string, group: 秘密}
+    - {variable: release.mlflowUrl, label: MLflow 位置, type: string, default: "http://edgeai-mlflow.edgeai-mlops.svc:5000", group: 來源}
+    - {variable: release.registry, label: 模型倉庫, type: string, default: harbor.example.com/edgeai-models, group: 來源}
+  ci: *skelci
+  readme: |
+    介面：C10 以 K8s Job 派到各 GPU 世代的 runner（依 `edge-ai/gpu-gen` 節點標籤）。TensorRT engine 綁 compute capability，必須在目標世代上建置。
+
+- name: edgeai-device-adapter
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: device-adapter（範本）
+  pack: iot
+  categories: [Applications]
+  tier: Node、Gateway
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: device-adapter-sdk 產出的設備接入範本（Connector → MQTT 標準 telemetry；可選 EdgeX Device Service 出口）
+  values:
+    adapter:
+      protocol: modbus-tcp
+      target: 192.0.2.10:502
+      pollIntervalSeconds: 5
+      mqttUrl: mqtt://edgeai-mosquitto-mosquitto.edgeai-iot.svc:1883
+      topicPrefix: edge/default/site-a/telemetry
+    networkPolicy:
+      allowedPorts: [{port: 9090}]
+    components:
+      app:
+        <<: *skel
+        replicas: 1
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              connector:
+                protocol: {{ .Values.adapter.protocol }}
+                target: {{ .Values.adapter.target | quote }}
+                pollIntervalSeconds: {{ .Values.adapter.pollIntervalSeconds }}
+              output:
+                mqtt: {{ .Values.adapter.mqttUrl | quote }}
+                topicPrefix: {{ .Values.adapter.topicPrefix | quote }}
+  questions:
+    - {variable: components.app.image.repository, label: 映像位置, description: "由 device-adapter-sdk 建置的 adapter 映像", type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, description: "設備帳密、MQTT 帳密", type: string, group: 秘密}
+    - {variable: adapter.protocol, label: 協定, type: string, default: modbus-tcp, group: 設備}
+    - {variable: adapter.target, label: 設備位址, type: string, default: "192.0.2.10:502", group: 設備}
+    - {variable: adapter.topicPrefix, label: MQTT topic 前綴, type: string, default: edge/default/site-a/telemetry, group: 輸出}
+  ci: *skelci
+  readme: |
+    每種設備一個 release（例如 `plc-line1`、`cpe-vendor-x`）。之後 SDK 會直接產出 app-pack，本 chart 是其中 `chart/` 的範本。
+
+- name: edgeai-portal-ui
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: edge-portal-ui（EdgeOne Console）
+  pack: platform
+  categories: [Applications]
+  tier: Hub
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: EdgeOne Console（React UI＋Go BFF；聚合各模組 Admin API、Keycloak OIDC、嵌入 Grafana）
+  values:
+    portal:
+      oidcIssuer: https://keycloak.example.com/realms/edge-ai
+      oidcClientId: edge-portal
+      grafanaUrl: http://edgeai-grafana.edgeai-observability.svc
+    networkPolicy:
+      allowedPorts: [{port: 8080}]
+    ingress: {enabled: false, component: ui, servicePort: http}
+    components:
+      ui:
+        <<: *skel
+        replicas: 1
+        envFrom: []
+        ports: [{name: http, containerPort: 8080}]
+        service: {enabled: true, type: ClusterIP, ports: [{name: http, port: 8080}]}
+        livenessProbe: {httpGet: {path: /, port: http}, periodSeconds: 20}
+        readinessProbe: {httpGet: {path: /, port: http}, periodSeconds: 10}
+        config: null
+      bff:
+        <<: *skel
+        replicas: 1
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              oidc:
+                issuer: {{ .Values.portal.oidcIssuer | quote }}
+                clientId: {{ .Values.portal.oidcClientId | quote }}   # client secret 走 Secret：OIDC_CLIENT_SECRET
+              grafana: {{ .Values.portal.grafanaUrl | quote }}
+              upstreams:
+                accessPolicy: http://edgeai-access-policy-service-app.edgeai-access.svc:8080
+                simAaa: http://edgeai-sim-aaa-adapter-app.edgeai-access.svc:8080
+                catalog: http://edgeai-app-catalog-controller-app.edgeai-platform.svc:8080
+                events: http://edgeai-unified-event-engine-app.edgeai-platform.svc:8080
+                ptt: http://edgeai-ptt-gateway-app.edgeai-voice.svc:8080
+                audit: http://edgeai-audit-service-app.edgeai-platform.svc:8080
+  questions:
+    - {variable: components.ui.image.repository, label: UI 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.ui.image.tag, label: UI 映像 tag, type: string, required: true, group: 映像}
+    - {variable: components.bff.image.repository, label: BFF 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.bff.image.tag, label: BFF 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, description: "OIDC_CLIENT_SECRET、SESSION_KEY", type: string, group: 秘密}
+    - {variable: portal.oidcIssuer, label: OIDC Issuer, type: string, default: "https://keycloak.example.com/realms/edge-ai", group: 登入}
+    - {variable: ingress.enabled, label: 啟用 Ingress, type: boolean, default: false, group: 網路, show_subquestion_if: true, subquestions: [{variable: ingress.host, label: 主機名稱, type: hostname}, {variable: ingress.tlsSecret, label: TLS Secret, type: string}]}
+  ci:
+    components:
+      ui: {image: {repository: registry.example/edgeai/portal-ui, tag: 0.1.0}}
+      bff: {image: {repository: registry.example/edgeai/portal-bff, tag: 0.1.0}}
+  readme: |
+    UI 只是殼：每頁只消費既有模組的 Admin API（文件 §3.9、R18）。BFF 的 upstreams 預設指向各骨架 chart 用預設 release 名稱安裝後的 Service。
+
+- name: edgeai-audit-service
+  kind: self
+  skeleton: true
+  version: 0.1.0
+  appVersion: "0.1.0"
+  display: edge-audit-service
+  pack: platform
+  categories: [Security]
+  tier: Hub
+  arch: amd64, arm64
+  license: 自研（專有）
+  licenseRisk: 低
+  description: 稽核服務（append-only 雜湊鏈、每日 anchor、四維查詢、簽章匯出、保留政策）
+  values:
+    audit:
+      databaseHost: pg-rw.edgeai-platform.svc
+      anchorS3Url: http://edgeai-seaweedfs-s3.edgeai-platform.svc:8333/audit-anchors
+      retentionDays: 365
+    networkPolicy:
+      allowedPorts: [{port: 8080}]
+    components:
+      app:
+        <<: *skel
+        replicas: 1
+        persistence: {enabled: true, mountPath: /var/spool/edgeai-audit, size: 5Gi}
+        config:
+          mountPath: /etc/edgeai
+          files:
+            config.yaml: |
+              store:
+                database: {{ .Values.audit.databaseHost | quote }}   # 帳密走 Secret：DB_USER／DB_PASSWORD
+              anchor:
+                s3: {{ .Values.audit.anchorS3Url | quote }}           # 憑證走 Secret：S3_ACCESS_KEY／S3_SECRET_KEY
+                schedule: daily
+              retentionDays: {{ .Values.audit.retentionDays }}
+              spool: /var/spool/edgeai-audit
+  questions:
+    - {variable: components.app.image.repository, label: 映像位置, type: string, required: true, group: 映像}
+    - {variable: components.app.image.tag, label: 映像 tag, type: string, required: true, group: 映像}
+    - {variable: existingSecret, label: 秘密 Secret, description: "DB_USER、DB_PASSWORD、S3_ACCESS_KEY、S3_SECRET_KEY", type: string, group: 秘密}
+    - {variable: audit.retentionDays, label: 保留天數, type: int, default: 365, group: 稽核}
+    - {variable: components.app.persistence.enabled, label: 本地 spool 持久化（PVC）, description: "斷線時緩衝稽核事件，建議開", type: boolean, default: true, group: 儲存}
+  ci: *skelci
+  readme: |
+    介面：C11 所有模組經 telemetry-client 非同步送入（MQTT／HTTP），稽核不可阻塞主流程；本地 spool 斷線緩衝。

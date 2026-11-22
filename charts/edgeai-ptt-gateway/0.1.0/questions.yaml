@@ -1,0 +1,32 @@
+# Rancher 安裝表單（Apps → Charts → ptt-gateway）
+questions:
+- variable: components.app.image.repository
+  label: 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  description: ARI_USER、ARI_PASSWORD
+  type: string
+  group: 秘密
+- variable: ptt.ariUrl
+  label: Asterisk ARI 位置
+  type: string
+  default: http://asterisk.edgeai-voice.svc:8088/ari
+  group: Asterisk
+- variable: components.app.service.type
+  label: Service 類型
+  description: PTT App 在叢集外時用 NodePort／LoadBalancer
+  type: enum
+  options:
+  - ClusterIP
+  - NodePort
+  - LoadBalancer
+  default: ClusterIP
+  group: 網路

@@ -1,0 +1,27 @@
+# Rancher 安裝表單（Apps → Charts → unified-event-engine）
+questions:
+- variable: components.app.image.repository
+  label: 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  description: MQTT／Redis／DB 帳密、Webhook token
+  type: string
+  group: 秘密
+- variable: events.mqttUrl
+  label: MQTT broker
+  type: string
+  default: mqtt://edgeai-mosquitto-mosquitto.edgeai-iot.svc:1883
+  group: 連線
+- variable: events.redisUrl
+  label: Redis（Valkey）
+  type: string
+  default: redis://edgeai-valkey.edgeai-platform.svc:6379
+  group: 連線

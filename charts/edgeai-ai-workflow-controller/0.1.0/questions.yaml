@@ -1,0 +1,39 @@
+# Rancher 安裝表單（Apps → Charts → ai-workflow-controller）
+questions:
+- variable: components.app.image.repository
+  label: Controller 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: Controller 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: workers.ds.repository
+  label: ds-worker 映像（Jetson）
+  type: string
+  group: Worker
+- variable: workers.ds.tag
+  label: ds-worker tag
+  type: string
+  group: Worker
+- variable: workers.gst.repository
+  label: gst-worker 映像（通用）
+  type: string
+  group: Worker
+- variable: workers.gst.tag
+  label: gst-worker tag
+  type: string
+  group: Worker
+- variable: existingSecret
+  label: 秘密 Secret
+  description: Camera 憑證另以 Secret 存放（ONVIF 探索後由 controller 建立）
+  type: string
+  group: 秘密
+- variable: workflow.vlmMaxConcurrent
+  label: VLM 最大併發
+  description: VRAM 保護的硬性預算
+  type: int
+  default: 2
+  group: 推論

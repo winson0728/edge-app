@@ -53,3 +53,12 @@ app.kubernetes.io/component: {{ $name }}
 {{- printf "%s:%s" $repo (required (printf "components.%s.image.tag 必填" $name) (toString $c.image.tag)) -}}
 {{- end -}}
 {{- end -}}
+
+{{/* ServiceAccount 名稱（骨架 chart 的 controller 用）。 */}}
+{{- define "eai.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+{{- default (include "eai.fullname" .) .Values.serviceAccount.name -}}
+{{- else -}}
+{{- default "default" .Values.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}

@@ -1,0 +1,6 @@
+# helm lint／template 測試值：只放 Secret 名稱，不含任何密碼
+components:
+  app:
+    image:
+      repository: registry.example/edgeai/skeleton
+      tag: 0.1.0

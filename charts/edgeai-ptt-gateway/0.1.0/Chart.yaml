@@ -1,0 +1,26 @@
+apiVersion: v2
+name: edgeai-ptt-gateway
+description: 企業 PTT 控制層（群組、floor control、優先權／緊急搶占、事件臨時群組；媒體面交給 Asterisk ARI）
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/winson0728/edge-app
+keywords:
+- edge-ai
+- pack-voice
+- skeleton
+- Applications
+annotations:
+  catalog.cattle.io/display-name: ptt-gateway（骨架）
+  catalog.cattle.io/certified: Voice/PTT
+  catalog.cattle.io/namespace: edgeai-voice
+  catalog.cattle.io/release-name: edgeai-ptt-gateway
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Voice/PTT
+  edge-ai/tier: Hub、Node（Survivable）
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: 自研（專有）
+  edge-ai/chart-kind: skeleton

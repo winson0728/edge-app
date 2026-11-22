@@ -24,6 +24,7 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 HERE = pathlib.Path(__file__).resolve().parent
 COMMON = HERE / "common" / "templates"
+SKELETON = HERE / "common" / "skeleton"
 
 
 class Dumper(yaml.SafeDumper):
@@ -63,6 +64,13 @@ SELF_BASE = {
     "networkPolicy": {"enabled": True, "allowedPorts": [], "allowFrom": []},
     "ingress": {"enabled": False, "className": "", "host": "", "tlsSecret": "", "annotations": {},
                 "component": "", "servicePort": ""},
+}
+
+
+SKELETON_BASE = {
+    "existingSecret": "",
+    "serviceAccount": {"create": True, "name": ""},
+    "rbac": {"create": False, "clusterWide": False, "rules": []},
 }
 
 
@@ -114,7 +122,8 @@ def build(c, cat, cache):
     app_version = c.get("appVersion") or (str(metas[0].get("appVersion", "")) if metas else "")
     home = c.get("upstreamHome") or (ups[0].get("home") if ups else None) or cat["defaults"]["home"]
 
-    keywords = ["edge-ai", f"pack-{c['pack']}"] + c.get("categories", [])
+    skel = bool(c.get("skeleton"))
+    keywords = ["edge-ai", f"pack-{c['pack']}"] + (["skeleton"] if skel else []) + c.get("categories", [])
     chart = {
         "apiVersion": "v2",
         "name": c["name"],
@@ -129,7 +138,7 @@ def build(c, cat, cache):
     if deps:
         chart["dependencies"] = deps
     chart["annotations"] = {
-        "catalog.cattle.io/display-name": c["display"],
+        "catalog.cattle.io/display-name": c["display"] + ("（骨架）" if skel else ""),
         # 非 Rancher 官方 repo 時，Rancher UI 會把 certified 的值當成卡片側標顯示：這裡放 Pack 名稱。
         "catalog.cattle.io/certified": pack["label"],
         "catalog.cattle.io/namespace": pack["namespace"],
@@ -141,13 +150,13 @@ def build(c, cat, cache):
         "edge-ai/tier": c["tier"],
         "edge-ai/arch": c["arch"],
         "edge-ai/license": c["license"],
-        "edge-ai/chart-kind": "upstream-wrapper" if ups else "edge-ai-authored",
+        "edge-ai/chart-kind": "skeleton" if skel else ("upstream-wrapper" if ups else "edge-ai-authored"),
     }
-    (d / "Chart.yaml").write_text(dump(chart), encoding="utf-8")
+    (d / "Chart.yaml").write_text(dump(chart), encoding="utf-8", newline=chr(10))
 
     # values
     if c["kind"] == "self":
-        values = deep_merge(SELF_BASE, c.get("values", {}))
+        values = deep_merge(deep_merge(SELF_BASE, SKELETON_BASE) if skel else SELF_BASE, c.get("values", {}))
     else:
         values = {single_dep: c.get("values", {})} if single_dep else c.get("values", {})
     header = (f"# {c['display']} — Edge AI 平台預設值\n"
@@ -156,27 +165,34 @@ def build(c, cat, cache):
         header += (f"# 上游 chart：{single_dep} {ups[0]['version']}（{ups[0]['repository'] or '見 README'}）。\n"
                    f"# 所有上游參數都放在 `{single_dep}:` 底下，可用上游文件的任何參數覆寫。\n")
     header += "# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。\n"
-    (d / "values.yaml").write_text(header + dump(values), encoding="utf-8")
+    (d / "values.yaml").write_text(header + dump(values), encoding="utf-8", newline=chr(10))
 
     # questions
     qs = [prefix_q(q, single_dep) for q in c.get("questions", [])]
     (d / "questions.yaml").write_text(
         "# Rancher 安裝表單（Apps → Charts → " + c["display"] + "）\n" + dump({"questions": qs}),
-        encoding="utf-8")
+        encoding="utf-8", newline=chr(10))
 
     # templates
     if c["kind"] == "self":
         for f in COMMON.iterdir():
             shutil.copy2(f, d / "templates" / f.name)
+        if skel:
+            for f in SKELETON.iterdir():
+                shutil.copy2(f, d / "templates" / f.name)
+    if c.get("crds"):
+        (d / "crds").mkdir()
+        for name, body in c["crds"].items():
+            (d / "crds" / name).write_text(body, encoding="utf-8", newline=chr(10))
     for name, body in (c.get("extraTemplates") or {}).items():
-        (d / "templates" / name).write_text(body, encoding="utf-8")
+        (d / "templates" / name).write_text(body, encoding="utf-8", newline=chr(10))
     if c.get("validate"):
         lines = []
         for v in c["validate"]:
             keys = " ".join(f'"{k}"' for k in v["path"].split("."))
             lines.append(f'{{{{- if not (index .Values {keys}) }}}}\n{{{{- fail "{v["msg"]}" }}}}\n{{{{- end }}}}')
         (d / "templates" / "validate.yaml").write_text(
-            "{{- /* 安裝前檢查：必填的 Secret 名稱等 */ -}}\n" + "\n".join(lines) + "\n", encoding="utf-8")
+            "{{- /* 安裝前檢查：必填的 Secret 名稱等 */ -}}\n" + "\n".join(lines) + "\n", encoding="utf-8", newline=chr(10))
     notes = [f"{c['display']} 已安裝（release {{{{ .Release.Name }}}}，namespace {{{{ .Release.Namespace }}}}）。",
              f"Pack：{pack['label']}；層級：{c['tier']}；架構：{c['arch']}。"]
     if ups:
@@ -186,18 +202,19 @@ def build(c, cat, cache):
                      "- {{ include \"eai.componentName\" (list $ $name $c) }}：{{ range $c.service.ports }}{{ .name }}={{ .port }}/{{ default \"TCP\" .protocol }} {{ end }}"
                      "{{ end }}{{ end }}")
     notes.append(f"授權：{c['license']}（商用打包風險：{c['licenseRisk']}）。說明見 chart README。")
-    (d / "templates" / "NOTES.txt").write_text("\n".join(notes) + "\n", encoding="utf-8")
+    (d / "templates" / "NOTES.txt").write_text("\n".join(notes) + "\n", encoding="utf-8", newline=chr(10))
 
     # ci 值與 .helmignore
     if c.get("ci"):
         (d / "ci").mkdir()
         (d / "ci" / "test-values.yaml").write_text(
-            "# helm lint／template 測試值：只放 Secret 名稱，不含任何密碼\n" + dump(c["ci"]), encoding="utf-8")
-    (d / ".helmignore").write_text("ci/\n*.bak\n.DS_Store\n", encoding="utf-8")
+            "# helm lint／template 測試值：只放 Secret 名稱，不含任何密碼\n" + dump(c["ci"]), encoding="utf-8", newline=chr(10))
+    (d / ".helmignore").write_text("ci/\n*.bak\n.DS_Store\n", encoding="utf-8", newline=chr(10))
 
     # app-readme（Rancher 安裝頁頂端）與 README
     lic = c["license"] + (f"　⚠ 商用打包風險：{c['licenseRisk']}" if c["licenseRisk"] not in ("低",) else "")
-    src = ("自寫 chart（tools/edgeai/common 樣板）" if not ups else
+    src = ("**骨架 chart**（自研模組尚未有程式與映像；映像位置為必填參數）" if skel else
+           "自寫 chart（tools/edgeai/common 樣板）" if not ups else
            "上游 chart wrapper：" + "、".join(f"`{u['name']}` {u['version']}" for u in ups)
            + "（上游原封打包於 charts/，只加平台預設值）")
     app_readme = (f"# {c['display']}\n\n{c['description']}\n\n"
@@ -205,7 +222,7 @@ def build(c, cat, cache):
                   f"| Pack | {pack['label']} |\n| 層級 | {c['tier']} |\n| 架構 | {c['arch']} |\n"
                   f"| 授權 | {lic} |\n| 來源 | {src} |\n\n"
                   "密碼與金鑰請先建立 Secret，再在表單填 Secret 名稱；進階參數用 **Edit YAML**。\n")
-    (d / "app-readme.md").write_text(app_readme, encoding="utf-8")
+    (d / "app-readme.md").write_text(app_readme, encoding="utf-8", newline=chr(10))
 
     up_lines = ""
     for u in ups:
@@ -232,7 +249,7 @@ def build(c, cat, cache):
         readme += "\n## 說明\n" + c["readme"]
     readme += ("\n## 驗證\n```bash\nhelm lint . " + ("-f ci/test-values.yaml" if c.get("ci") else "")
                + "\nhelm template t . " + ("-f ci/test-values.yaml" if c.get("ci") else "") + "\n```\n")
-    (d / "README.md").write_text(readme, encoding="utf-8")
+    (d / "README.md").write_text(readme, encoding="utf-8", newline=chr(10))
     return d
 
 
@@ -257,7 +274,7 @@ def write_docs(cat):
     if start in text and end in text:
         head, rest = text.split(start, 1)
         _, tail = rest.split(end, 1)
-        doc.write_text(head + start + "\n" + chart_table(cat) + end + tail, encoding="utf-8")
+        doc.write_text(head + start + "\n" + chart_table(cat) + end + tail, encoding="utf-8", newline=chr(10))
         print("updated", doc.relative_to(ROOT))
 
 

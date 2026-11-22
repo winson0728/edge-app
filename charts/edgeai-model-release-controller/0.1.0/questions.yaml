@@ -1,0 +1,27 @@
+# Rancher 安裝表單（Apps → Charts → model-release-controller）
+questions:
+- variable: components.app.image.repository
+  label: 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  description: REGISTRY_USER、REGISTRY_PASSWORD、COSIGN_KEY 等
+  type: string
+  group: 秘密
+- variable: release.mlflowUrl
+  label: MLflow 位置
+  type: string
+  default: http://edgeai-mlflow.edgeai-mlops.svc:5000
+  group: 來源
+- variable: release.registry
+  label: 模型倉庫
+  type: string
+  default: harbor.example.com/edgeai-models
+  group: 來源

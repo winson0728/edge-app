@@ -1,0 +1,26 @@
+apiVersion: v2
+name: edgeai-app-catalog-controller
+description: App Catalog（AppPack 目錄、preflight、授權 JWT 驗證、GitOps values commit；ZTP／OTA 子系統掛點）
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/winson0728/edge-app
+keywords:
+- edge-ai
+- pack-platform
+- skeleton
+- Infrastructure
+annotations:
+  catalog.cattle.io/display-name: edge-app-catalog-controller（骨架）
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-app-catalog-controller
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: 自研（專有）
+  edge-ai/chart-kind: skeleton

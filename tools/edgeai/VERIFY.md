@@ -39,3 +39,10 @@ Git 型 `edge-app` 套件庫要在推到 `main` 後 Refresh 才會出現新 char
 - hostNetwork 會占用節點埠：Kea DHCP、Asterisk（Asterisk 另需自建映像）。
 - 需要外部資料庫或 Secret 的整合件：Keycloak、LiteLLM、MLflow、Open WebUI、step-ca、Loki、Grafana、MinIO、SeaweedFS、OTel Collector。
 建議在有 StorageClass 的 Lab 叢集（或 127 裝 local-path 後）再做第二輪。
+
+## 6. 第二輪：Layer 2 自研模組骨架（11 個）
+- `check.sh`：11 個全部 lint PASS、template PASS；沒填映像位置時 template 階段即拒絕。
+- 127 server 端驗證（不建立任何物件）：11 個 `helm install --dry-run=server` 全部 PASS（5～7 個物件），
+  3 個 CRD `kubectl apply --dry-run=server` 通過；驗證後 127 沒有 `*.edgeai.internal` CRD、helm release 仍 17 個、暫存目錄已刪。
+- 沒有實裝：模組尚無映像。
+- 共用樣板 `tools/edgeai/common` 這輪加了 ServiceAccount 支援（沒設定 `serviceAccount` 時輸出不變）；第一輪 9 個自寫 chart 沒有重產，下次重產時要一併升版。

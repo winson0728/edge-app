@@ -1,0 +1,103 @@
+# edge-audit-service — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+nameOverride: ''
+fullnameOverride: ''
+imagePullSecrets: []
+podSecurityContext: {}
+nodeSelector:
+  kubernetes.io/os: linux
+tolerations: []
+affinity: {}
+networkPolicy:
+  enabled: true
+  allowedPorts:
+  - port: 8080
+  allowFrom: []
+ingress:
+  enabled: false
+  className: ''
+  host: ''
+  tlsSecret: ''
+  annotations: {}
+  component: ''
+  servicePort: ''
+existingSecret: ''
+serviceAccount:
+  create: true
+  name: ''
+rbac:
+  create: false
+  clusterWide: false
+  rules: []
+audit:
+  databaseHost: pg-rw.edgeai-platform.svc
+  anchorS3Url: http://edgeai-seaweedfs-s3.edgeai-platform.svc:8333/audit-anchors
+  retentionDays: 365
+components:
+  app:
+    enabled: true
+    replicas: 1
+    image:
+      repository: ''
+      tag: ''
+      pullPolicy: IfNotPresent
+    env:
+    - name: EDGEAI_CONFIG
+      value: /etc/edgeai/config.yaml
+    envFrom:
+    - secretRef:
+        name: '{{ .Values.existingSecret | default (printf "%s-secrets" (include "eai.fullname" .)) }}'
+        optional: true
+    ports:
+    - name: http
+      containerPort: 8080
+    - name: metrics
+      containerPort: 9090
+    service:
+      enabled: true
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8080
+      - name: metrics
+        port: 9090
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: http
+      initialDelaySeconds: 10
+      periodSeconds: 20
+    readinessProbe:
+      httpGet:
+        path: /readyz
+        port: http
+      periodSeconds: 10
+    securityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+    config:
+      mountPath: /etc/edgeai
+      files:
+        config.yaml: |
+          store:
+            database: {{ .Values.audit.databaseHost | quote }}   # 帳密走 Secret：DB_USER／DB_PASSWORD
+          anchor:
+            s3: {{ .Values.audit.anchorS3Url | quote }}           # 憑證走 Secret：S3_ACCESS_KEY／S3_SECRET_KEY
+            schedule: daily
+          retentionDays: {{ .Values.audit.retentionDays }}
+          spool: /var/spool/edgeai-audit
+    persistence:
+      enabled: true
+      mountPath: /var/spool/edgeai-audit
+      size: 5Gi

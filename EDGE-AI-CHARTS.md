@@ -5,7 +5,7 @@ Edge AI 平台（v2 Roadmap 三層架構：Hub／Node／Gateway）Layer 1 直接
 既有的 `vlm-app`、`srs`、`doublinks`、`zerotier-planet` 不受影響。
 
 - 規劃依據：`edge-ai-plan-review-and-v2-roadmap.md`（§3.3 Pack、§5 OSS 授權）、`edge-ai-custom-modules-implementation-plan.md`（Layer 1 清單）
-- 本輪範圍：**開源套件 32 個**（上游 wrapper 23、自寫 9）＋ 既有 vlm-app。Layer 2 自研模組（sim-aaa-adapter 等）的骨架 chart 另案。
+- 範圍：**開源套件 32 個**（上游 wrapper 23、自寫 9）＋ **Layer 2 自研模組骨架 11 個** ＋ 既有 vlm-app。
 
 ## 1. 清單
 
@@ -16,14 +16,19 @@ Edge AI 平台（v2 Roadmap 三層架構：Hub／Node／Gateway）Layer 1 直接
 <!-- chart-table:start -->
 | Pack | Chart | 軟體 | 來源 | 層級 | 架構 | 授權 |
 |---|---|---|---|---|---|---|
+| Access & NAC | `edgeai-access-policy-service` 0.1.0 | access-policy-service | 自寫 | Hub（＋Node 決策快取） | amd64, arm64 | 自研（專有） |
 | Access & NAC | `edgeai-freeradius` 0.1.0 | FreeRADIUS | 自寫 | Hub、Node（Site Survival 副本） | amd64, arm64 | GPL-2.0 ⚠中 |
 | Access & NAC | `edgeai-headscale` 0.1.0 | Headscale | 自寫 | Hub | amd64, arm64 | BSD-3-Clause |
 | Access & NAC | `edgeai-kea-dhcp` 0.1.0 | Kea DHCP | 自寫 | Hub、Node | amd64（ISC 官方映像只有 amd64；arm64 需自建映像） | MPL-2.0 |
 | Access & NAC | `edgeai-keycloak` 0.1.0 | Keycloak | wrapper：keycloakx 7.4.0 | Hub | amd64, arm64 | Apache-2.0 |
+| Access & NAC | `edgeai-sim-aaa-adapter` 0.1.0 | sim-aaa-adapter | 自寫 | Hub（＋Node Survival 副本） | amd64, arm64 | 自研（專有） |
 | Access & NAC | `edgeai-step-ca` 0.1.0 | step-ca 私有 CA | wrapper：step-certificates 1.30.1 | Hub | amd64, arm64 | Apache-2.0 |
+| Vision | `edgeai-ai-workflow-controller` 0.1.0 | ai-workflow-controller | 自寫 | Node、Hub | amd64, arm64（ds-worker 只有 Jetson／arm64） | 自研（專有） |
 | Vision | `edgeai-mediamtx` 0.1.0 | MediaMTX | 自寫 | Node、Gateway | amd64, arm64 | MIT |
 | Vision | `edgeai-triton` 0.1.0 | Triton Inference Server | 自寫 | Hub、Node | amd64, arm64（Thor／Spark 用同一個多架構映像；Orin 需 JetPack 版映像） | BSD-3-Clause（程式）＋ NVIDIA 映像 EULA ⚠低中 |
 | Voice/PTT | `edgeai-asterisk` 0.1.0 | Asterisk（IP PBX） | 自寫 | Hub、Node（Survivable Gateway） | amd64, arm64（映像需自建） | GPL-2.0 ⚠中 |
+| Voice/PTT | `edgeai-ptt-gateway` 0.1.0 | ptt-gateway | 自寫 | Hub、Node（Survivable） | amd64, arm64 | 自研（專有） |
+| IoT/OT | `edgeai-device-adapter` 0.1.0 | device-adapter（範本） | 自寫 | Node、Gateway | amd64, arm64 | 自研（專有） |
 | IoT/OT | `edgeai-edgex` 0.1.0 | EdgeX Foundry（core） | 自寫 | Node、Gateway | amd64, arm64 | Apache-2.0 |
 | IoT/OT | `edgeai-mosquitto` 0.1.0 | Eclipse Mosquitto | 自寫 | Hub、Node、Gateway | amd64, arm64 | EPL-2.0 / EDL-1.0 |
 | IoT/OT | `edgeai-thingsboard` 0.1.0 | ThingsBoard CE（選配） | 自寫 | Hub | amd64, arm64 | Apache-2.0 |
@@ -33,12 +38,18 @@ Edge AI 平台（v2 Roadmap 三層架構：Hub／Node／Gateway）Layer 1 直接
 | RAG | `edgeai-vllm` 0.1.0 | vLLM（production-stack） | wrapper：vllm-stack 0.1.14 | Hub、Node | amd64（Thor／Spark 需改用 NVIDIA 提供的 arm64 vLLM 映像） | Apache-2.0 |
 | MLOps | `edgeai-cvat` 0.1.0 | CVAT | wrapper：cvat 2.83.0 | Hub | amd64 | MIT |
 | MLOps | `edgeai-mlflow` 0.1.0 | MLflow | wrapper：mlflow 1.11.7 | Hub | amd64, arm64 | Apache-2.0 |
+| MLOps | `edgeai-model-release-controller` 0.1.0 | model-release-controller | 自寫 | Hub | amd64, arm64 | 自研（專有） |
+| Platform | `edgeai-app-catalog-controller` 0.1.0 | edge-app-catalog-controller | 自寫 | Hub | amd64, arm64 | 自研（專有） |
+| Platform | `edgeai-app-lifecycle-operator` 0.1.0 | app-lifecycle-operator | 自寫 | Hub、Node、Gateway（每個受管叢集一份） | amd64, arm64 | 自研（專有） |
 | Platform | `edgeai-argo-cd` 0.1.0 | Argo CD（選配） | wrapper：argo-cd 10.18.2 | Hub | amd64, arm64 | Apache-2.0 |
+| Platform | `edgeai-audit-service` 0.1.0 | edge-audit-service | 自寫 | Hub | amd64, arm64 | 自研（專有） |
 | Platform | `edgeai-cloudnative-pg` 0.1.0 | CloudNativePG Operator | wrapper：cloudnative-pg 0.29.2 | Hub、Node | amd64, arm64 | Apache-2.0 |
 | Platform | `edgeai-gitea` 0.1.0 | Gitea | wrapper：gitea 12.7.0 | Hub | amd64, arm64 | MIT |
 | Platform | `edgeai-harbor` 0.1.0 | Harbor | wrapper：harbor 1.19.4 | Hub | amd64（官方映像未提供 arm64） | Apache-2.0 |
 | Platform | `edgeai-minio` 0.1.0 | MinIO（選配，AGPL） | wrapper：minio 5.4.0 | Hub | amd64, arm64 | AGPL-3.0 ⚠中高 |
+| Platform | `edgeai-portal-ui` 0.1.0 | edge-portal-ui（EdgeOne Console） | 自寫 | Hub | amd64, arm64 | 自研（專有） |
 | Platform | `edgeai-seaweedfs` 0.1.0 | SeaweedFS（S3） | wrapper：seaweedfs 4.54.0 | Hub | amd64, arm64 | Apache-2.0 |
+| Platform | `edgeai-unified-event-engine` 0.1.0 | unified-event-engine | 自寫 | Hub、Node | amd64, arm64 | 自研（專有） |
 | Platform | `edgeai-valkey` 0.1.0 | Valkey | wrapper：valkey 1.0.0 | Hub、Node | amd64, arm64 | BSD-3-Clause |
 | Platform | `edgeai-velero` 0.1.0 | Velero | wrapper：velero 12.2.5 | Hub、Node | amd64, arm64 | Apache-2.0 |
 | Observability | `edgeai-grafana` 0.1.0 | Grafana（AGPL） | wrapper：grafana 10.5.15 | Hub | amd64, arm64 | AGPL-3.0 ⚠中 |
@@ -49,6 +60,14 @@ Edge AI 平台（v2 Roadmap 三層架構：Hub／Node／Gateway）Layer 1 直接
 | Security | `edgeai-kyverno` 0.1.0 | Kyverno | wrapper：kyverno 3.10.0 | Hub、Node、Gateway | amd64, arm64 | Apache-2.0 |
 | Security | `edgeai-trivy-operator` 0.1.0 | Trivy Operator | wrapper：trivy-operator 0.38.1 | Hub、Node | amd64, arm64 | Apache-2.0 |
 <!-- chart-table:end -->
+
+### Layer 2 自研模組＝骨架 chart
+清單中「授權：自研（專有）」的 11 個（Rancher 顯示名稱後面加「（骨架）」、keyword `skeleton`、`edge-ai/chart-kind: skeleton`）：
+- 模組還**沒有程式與映像**：`components.<name>.image.repository／tag` 為必填，空白時安裝前就會拒絕。
+- 骨架內容：Deployment、Service（http 8080＋metrics 9090，`/healthz`、`/readyz`）、ConfigMap（`/etc/edgeai/config.yaml`，依文件的介面與設定項）、NetworkPolicy（依文件契約限制來源）、ServiceAccount／RBAC（controller 類）、
+  CRD（`AppPack`、`EdgeApp`、`VisionPipeline`，放在 chart 的 `crds/`，API group 暫用 `*.edgeai.internal`）。
+- 秘密：以環境變數從 Secret 帶入（`existingSecret`；空白時讀 `<release>-<chart>-secrets`，optional），建議鍵名寫在各 chart 的表單與 README。
+- common-sdk 是函式庫，不做 chart。程式完成後依文件 §1.2 DoD 補 dashboard、alert rules、runbook，並把 chart 升版。
 
 ### 刻意不做成 chart 的
 | 軟體 | 理由 |

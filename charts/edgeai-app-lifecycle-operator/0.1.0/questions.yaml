@@ -1,0 +1,24 @@
+# Rancher 安裝表單（Apps → Charts → app-lifecycle-operator）
+questions:
+- variable: components.app.image.repository
+  label: 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  type: string
+  group: 秘密
+- variable: operator.mode
+  label: 部署模式
+  type: enum
+  options:
+  - gitops
+  - airgap
+  default: gitops
+  group: Operator

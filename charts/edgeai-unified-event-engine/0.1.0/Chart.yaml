@@ -1,0 +1,26 @@
+apiVersion: v2
+name: edgeai-unified-event-engine
+description: AI／IoT／PTT／網路事件編排（CloudEvents 驗證、去重、關聯、CEL 規則、動作派送、升級鏈、Incident Timeline）
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/winson0728/edge-app
+keywords:
+- edge-ai
+- pack-platform
+- skeleton
+- Applications
+annotations:
+  catalog.cattle.io/display-name: unified-event-engine（骨架）
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-unified-event-engine
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub、Node
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: 自研（專有）
+  edge-ai/chart-kind: skeleton

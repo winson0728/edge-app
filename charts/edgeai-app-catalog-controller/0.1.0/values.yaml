@@ -1,0 +1,126 @@
+# edge-app-catalog-controller — Edge AI 平台預設值
+# 由 tools/edgeai/build.py 依 tools/edgeai/catalog.yaml 產生；請改 catalog 後重產。
+# 密碼／金鑰一律用 Secret（existingSecret 類參數），不要寫進 values。
+nameOverride: ''
+fullnameOverride: ''
+imagePullSecrets: []
+podSecurityContext: {}
+nodeSelector:
+  kubernetes.io/os: linux
+tolerations: []
+affinity: {}
+networkPolicy:
+  enabled: true
+  allowedPorts: []
+  allowFrom: []
+ingress:
+  enabled: false
+  className: ''
+  host: ''
+  tlsSecret: ''
+  annotations: {}
+  component: ''
+  servicePort: ''
+existingSecret: ''
+serviceAccount:
+  create: true
+  name: ''
+rbac:
+  create: true
+  clusterWide: true
+  rules:
+  - apiGroups:
+    - catalog.edgeai.internal
+    resources:
+    - apppacks
+    - apppacks/status
+    - edgeapps
+    - edgeapps/status
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+  - apiGroups:
+    - ''
+    resources:
+    - nodes
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ''
+    resources:
+    - events
+    verbs:
+    - create
+    - patch
+catalog:
+  giteaUrl: http://edgeai-gitea-http.edgeai-platform.svc:3000
+  registry: harbor.example.com/edgeai-packs
+components:
+  app:
+    enabled: true
+    replicas: 1
+    image:
+      repository: ''
+      tag: ''
+      pullPolicy: IfNotPresent
+    env:
+    - name: EDGEAI_CONFIG
+      value: /etc/edgeai/config.yaml
+    envFrom:
+    - secretRef:
+        name: '{{ .Values.existingSecret | default (printf "%s-secrets" (include "eai.fullname" .)) }}'
+        optional: true
+    ports:
+    - name: http
+      containerPort: 8080
+    - name: metrics
+      containerPort: 9090
+    service:
+      enabled: true
+      type: ClusterIP
+      ports:
+      - name: http
+        port: 8080
+      - name: metrics
+        port: 9090
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: http
+      initialDelaySeconds: 10
+      periodSeconds: 20
+    readinessProbe:
+      httpGet:
+        path: /readyz
+        port: http
+      periodSeconds: 10
+    securityContext:
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+    config:
+      mountPath: /etc/edgeai
+      files:
+        config.yaml: |
+          catalog:
+            registry: {{ .Values.catalog.registry | quote }}   # app-pack（OCI Artifact）
+          gitops:
+            giteaUrl: {{ .Values.catalog.giteaUrl | quote }}   # token 走 Secret：GITEA_TOKEN
+          entitlement:
+            publicKeyPath: /etc/edgeai/license/cosign.pub      # 授權 JWT 驗簽公鑰（待以 Secret 掛載）

@@ -1,0 +1,73 @@
+{{- /* ConfigMap／Service／PVC：每個啟用的元件各一組。 */ -}}
+{{- range $name, $c := .Values.components }}
+{{- if $c.enabled }}
+{{- $full := include "eai.componentName" (list $ $name $c) }}
+{{- if $c.config }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $full }}
+  labels:
+    {{- include "eai.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+data:
+  {{- range $file, $content := $c.config.files }}
+  {{ $file }}: |-
+    {{- tpl $content $ | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- if and $c.service $c.service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $full }}
+  labels:
+    {{- include "eai.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+  {{- with $c.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ default "ClusterIP" $c.service.type }}
+  {{- if and (eq (default "ClusterIP" $c.service.type) "LoadBalancer") $c.service.loadBalancerIP }}
+  loadBalancerIP: {{ $c.service.loadBalancerIP }}
+  {{- end }}
+  selector:
+    {{- include "eai.selectorLabels" (list $ $name) | nindent 4 }}
+  ports:
+    {{- range $c.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ default .name .targetPort }}
+      protocol: {{ default "TCP" .protocol }}
+      {{- if and .nodePort (or (eq (default "ClusterIP" $c.service.type) "NodePort") (eq (default "ClusterIP" $c.service.type) "LoadBalancer")) }}
+      nodePort: {{ .nodePort }}
+      {{- end }}
+    {{- end }}
+{{- end }}
+{{- if and $c.persistence $c.persistence.enabled (not $c.persistence.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $full }}
+  labels:
+    {{- include "eai.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - {{ default "ReadWriteOnce" $c.persistence.accessMode }}
+  {{- with $c.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ default "1Gi" $c.persistence.size }}
+{{- end }}
+{{- end }}
+{{- end }}

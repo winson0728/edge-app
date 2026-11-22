@@ -1,0 +1,10 @@
+# helm lint／template 測試值：只放 Secret 名稱，不含任何密碼
+components:
+  ui:
+    image:
+      repository: registry.example/edgeai/portal-ui
+      tag: 0.1.0
+  bff:
+    image:
+      repository: registry.example/edgeai/portal-bff
+      tag: 0.1.0

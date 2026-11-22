@@ -1,0 +1,33 @@
+# Rancher 安裝表單（Apps → Charts → device-adapter（範本））
+questions:
+- variable: components.app.image.repository
+  label: 映像位置
+  description: 由 device-adapter-sdk 建置的 adapter 映像
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  description: 設備帳密、MQTT 帳密
+  type: string
+  group: 秘密
+- variable: adapter.protocol
+  label: 協定
+  type: string
+  default: modbus-tcp
+  group: 設備
+- variable: adapter.target
+  label: 設備位址
+  type: string
+  default: 192.0.2.10:502
+  group: 設備
+- variable: adapter.topicPrefix
+  label: MQTT topic 前綴
+  type: string
+  default: edge/default/site-a/telemetry
+  group: 輸出

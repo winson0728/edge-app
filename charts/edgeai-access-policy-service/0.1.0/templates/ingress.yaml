@@ -1,0 +1,34 @@
+{{- if .Values.ingress.enabled }}
+{{- $c := index .Values.components .Values.ingress.component }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "eai.fullname" . }}
+  labels:
+    {{- include "eai.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingress.tlsSecret }}
+  tls:
+    - hosts: [{{ required "ingress.host 必填" .Values.ingress.host | quote }}]
+      secretName: {{ .Values.ingress.tlsSecret }}
+  {{- end }}
+  rules:
+    - host: {{ required "ingress.host 必填" .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "eai.componentName" (list . .Values.ingress.component $c) }}
+                port:
+                  name: {{ .Values.ingress.servicePort }}
+{{- end }}

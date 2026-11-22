@@ -1,0 +1,26 @@
+apiVersion: v2
+name: edgeai-ai-workflow-controller
+description: Vision Pipeline 編排（VisionPipeline CR、Camera 註冊、YOLO 偵測→VLM 覆核、VLM 預算、Privacy 遮罩、Evidence）
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/winson0728/edge-app
+keywords:
+- edge-ai
+- pack-vision
+- skeleton
+- Applications
+annotations:
+  catalog.cattle.io/display-name: ai-workflow-controller（骨架）
+  catalog.cattle.io/certified: Vision
+  catalog.cattle.io/namespace: edgeai-vision
+  catalog.cattle.io/release-name: edgeai-ai-workflow-controller
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Vision
+  edge-ai/tier: Node、Hub
+  edge-ai/arch: amd64, arm64（ds-worker 只有 Jetson／arm64）
+  edge-ai/license: 自研（專有）
+  edge-ai/chart-kind: skeleton

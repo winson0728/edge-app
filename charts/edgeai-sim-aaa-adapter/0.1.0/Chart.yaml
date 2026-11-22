@@ -1,0 +1,27 @@
+apiVersion: v2
+name: edgeai-sim-aaa-adapter
+description: Wi-Fi EAP-AKA／AKA′ 與 Harmony UDM／AUSF 介接（只做認證：AV 取得、SQN resync、pseudonym／fast re-auth）
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/winson0728/edge-app
+keywords:
+- edge-ai
+- pack-access
+- skeleton
+- Security
+- Networking
+annotations:
+  catalog.cattle.io/display-name: sim-aaa-adapter（骨架）
+  catalog.cattle.io/certified: Access & NAC
+  catalog.cattle.io/namespace: edgeai-access
+  catalog.cattle.io/release-name: edgeai-sim-aaa-adapter
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Access & NAC
+  edge-ai/tier: Hub（＋Node Survival 副本）
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: 自研（專有）
+  edge-ai/chart-kind: skeleton

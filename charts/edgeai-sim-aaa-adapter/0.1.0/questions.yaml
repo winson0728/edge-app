@@ -1,0 +1,18 @@
+# Rancher 安裝表單（Apps → Charts → sim-aaa-adapter）
+questions:
+- variable: components.app.image.repository
+  label: 映像位置
+  description: 自研模組尚無映像，請填 Harbor 位置（例如 harbor.local/edgeai/sim-aaa-adapter）
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  description: 以環境變數帶入（UDM token、Redis 密碼等）；空白則讀 <release>-<chart>-secrets
+  type: string
+  group: 秘密

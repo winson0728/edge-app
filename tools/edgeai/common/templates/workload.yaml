@@ -58,6 +58,11 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with $.Values.serviceAccount }}
+      {{- if or .create .name }}
+      serviceAccountName: {{ include "eai.serviceAccountName" $ }}
+      {{- end }}
+      {{- end }}
       {{- if $c.hostNetwork }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

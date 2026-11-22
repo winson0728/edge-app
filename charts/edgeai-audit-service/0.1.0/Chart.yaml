@@ -1,0 +1,26 @@
+apiVersion: v2
+name: edgeai-audit-service
+description: 稽核服務（append-only 雜湊鏈、每日 anchor、四維查詢、簽章匯出、保留政策）
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: '>=1.28.0-0'
+home: https://github.com/winson0728/edge-app
+keywords:
+- edge-ai
+- pack-platform
+- skeleton
+- Security
+annotations:
+  catalog.cattle.io/display-name: edge-audit-service（骨架）
+  catalog.cattle.io/certified: Platform
+  catalog.cattle.io/namespace: edgeai-platform
+  catalog.cattle.io/release-name: edgeai-audit-service
+  catalog.cattle.io/os: linux
+  catalog.cattle.io/permits-os: linux
+  catalog.cattle.io/kube-version: '>=1.28.0-0'
+  edge-ai/pack: Platform
+  edge-ai/tier: Hub
+  edge-ai/arch: amd64, arm64
+  edge-ai/license: 自研（專有）
+  edge-ai/chart-kind: skeleton

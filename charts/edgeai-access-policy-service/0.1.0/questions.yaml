@@ -1,0 +1,35 @@
+# Rancher 安裝表單（Apps → Charts → access-policy-service）
+questions:
+- variable: components.app.image.repository
+  label: 映像位置
+  type: string
+  required: true
+  group: 映像
+- variable: components.app.image.tag
+  label: 映像 tag
+  type: string
+  required: true
+  group: 映像
+- variable: existingSecret
+  label: 秘密 Secret
+  description: DB_USER、DB_PASSWORD、KEYCLOAK_CLIENT_SECRET 等；空白則讀 <release>-<chart>-secrets
+  type: string
+  group: 秘密
+- variable: policy.failMode
+  label: 決策失效行為
+  type: enum
+  options:
+  - close
+  - open
+  default: close
+  group: 政策
+- variable: policy.quarantineVlan
+  label: 隔離 VLAN
+  type: string
+  default: '999'
+  group: 政策
+- variable: policy.databaseHost
+  label: PostgreSQL 主機
+  type: string
+  default: pg-rw.edgeai-platform.svc
+  group: 資料庫
