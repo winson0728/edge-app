@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: ''
 kubeVersion: '>=1.28.0-0'
 home: https://docs.vllm.ai/projects/production-stack
+icon: file://assets/logos/edgeai-vllm.png
 keywords:
 - edge-ai
 - pack-rag

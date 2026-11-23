@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: 12.3.1
 kubeVersion: '>=1.28.0-0'
 home: https://grafana.com/oss/grafana/
+icon: file://assets/logos/edgeai-grafana.svg
 keywords:
 - edge-ai
 - pack-observe

@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: 3.16.0
 kubeVersion: '>=1.28.0-0'
 home: https://mlflow.org
+icon: file://assets/logos/edgeai-mlflow.svg
 keywords:
 - edge-ai
 - pack-mlops

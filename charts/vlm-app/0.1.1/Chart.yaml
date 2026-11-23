@@ -4,6 +4,7 @@ description: VLM-APP — CCTV monitoring with YOLO11 + local VLM (Ollama) for k3
 type: application
 version: 0.1.1
 appVersion: "v92"
+icon: file://assets/logos/vlm-app.svg
 keywords:
   - cctv
   - vlm

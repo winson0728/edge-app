@@ -133,8 +133,13 @@ def build(c, cat, cache):
         "appVersion": app_version,
         "kubeVersion": cat["defaults"]["kubeVersion"],
         "home": home,
-        "keywords": keywords,
     }
+    # Rancher 卡片圖示：assets/logos/<chart>.<ext>（相對 repo 根目錄，Rancher 由套件庫直接讀取）
+    for ext in ("svg", "png"):
+        if (ROOT / "assets" / "logos" / f"{c['name']}.{ext}").exists():
+            chart["icon"] = f"file://assets/logos/{c['name']}.{ext}"
+            break
+    chart["keywords"] = keywords
     if deps:
         chart["dependencies"] = deps
     chart["annotations"] = {

@@ -3,4 +3,5 @@ name: zerotier-planet
 description: ZeroTier Planet / ZTNCUI deployment with Multus macvlan support
 version: 0.1.4
 appVersion: "latest"
+icon: file://assets/logos/zerotier-planet.svg
 type: application

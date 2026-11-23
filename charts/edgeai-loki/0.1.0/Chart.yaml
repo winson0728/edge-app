@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: 3.6.20
 kubeVersion: '>=1.28.0-0'
 home: https://grafana.com/oss/loki/
+icon: file://assets/logos/edgeai-loki.png
 keywords:
 - edge-ai
 - pack-observe

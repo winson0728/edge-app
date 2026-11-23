@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: v2.15.0
 kubeVersion: '>=1.28.0-0'
 home: https://external-secrets.io
+icon: file://assets/logos/edgeai-external-secrets.svg
 keywords:
 - edge-ai
 - pack-security

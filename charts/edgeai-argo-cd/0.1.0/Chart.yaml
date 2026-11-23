@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: v3.6.2
 kubeVersion: '>=1.28.0-0'
 home: https://argo-cd.readthedocs.io
+icon: file://assets/logos/edgeai-argo-cd.svg
 keywords:
 - edge-ai
 - pack-platform

@@ -4,6 +4,7 @@ description: SRS media server for Rancher
 type: application
 version: 1.0.0
 appVersion: "6.0"
+icon: file://assets/logos/srs.png
 
 annotations:
   catalog.cattle.io/display-name: "SRS Media Server"

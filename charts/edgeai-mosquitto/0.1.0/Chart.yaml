@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: 2.0.23
 kubeVersion: '>=1.28.0-0'
 home: https://mosquitto.org
+icon: file://assets/logos/edgeai-mosquitto.svg
 keywords:
 - edge-ai
 - pack-iot

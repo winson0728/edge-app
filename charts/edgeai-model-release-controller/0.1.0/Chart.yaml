@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: 0.1.0
 kubeVersion: '>=1.28.0-0'
 home: https://github.com/winson0728/edge-app
+icon: file://assets/logos/edgeai-model-release-controller.svg
 keywords:
 - edge-ai
 - pack-mlops

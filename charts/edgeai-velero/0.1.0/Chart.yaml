@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: 1.18.2
 kubeVersion: '>=1.28.0-0'
 home: https://velero.io
+icon: file://assets/logos/edgeai-velero.svg
 keywords:
 - edge-ai
 - pack-platform

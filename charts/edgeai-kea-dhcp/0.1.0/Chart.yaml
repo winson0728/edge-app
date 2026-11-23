@@ -6,6 +6,7 @@ version: 0.1.0
 appVersion: 3.0.5
 kubeVersion: '>=1.28.0-0'
 home: https://www.isc.org/kea/
+icon: file://assets/logos/edgeai-kea-dhcp.png
 keywords:
 - edge-ai
 - pack-access
