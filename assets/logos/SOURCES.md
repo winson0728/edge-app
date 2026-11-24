@@ -3,6 +3,8 @@
 每個 chart 的 `Chart.yaml` 以 `icon: file://assets/logos/<chart>.<ext>` 指到這裡，路徑相對 repo 根目錄，Rancher 從套件庫直接讀取，不需要對外連線。
 `tools/edgeai/build.py` 產生 `edgeai-*` chart 時，若這裡有同名的 `.svg`／`.png` 會自動寫入 `icon:`。新增 chart 時請一併放圖。
 
+檢查：`python3 tools/check_icons.py .`（repo 根目錄執行）會逐一確認每個 chart 都有 `icon:`、路徑在 `assets/logos/`、檔案存在且 SVG／PNG 格式正確，並列出沒被用到的圖檔；有錯誤時 exit 1。測試：`cd tools && python3 -m unittest test_check_icons`。
+
 ## 開源專案：使用官方 logo
 
 商標與 logo 版權屬各專案／公司所有，這裡只用來在套件目錄標示對應軟體。
