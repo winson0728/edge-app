@@ -1,0 +1,98 @@
+# ── VLM-APP Helm values (k3s / RKE2 edge node with an NVIDIA GPU) ──────
+
+# The image is not published: build it and load it into the node's containerd
+# (see README). pullPolicy Never = use the local image only.
+# The tag defaults to "<platform>-<appVersion>" (e.g. arm64-thor-v92.3), so installing
+# this chart version installs the matching app version; set image.tag to override.
+image:
+  repository: vlm-app
+  platform: arm64-thor       # arm64-thor (Jetson Thor) | x86-rtx50 (x86, RTX 50 series)
+  tag: ""                    # empty = <platform>-<appVersion>
+  pullPolicy: Never
+
+# GPU access. On k3s install the NVIDIA container runtime + device plugin.
+gpu:
+  # runtimeClassName exposes the GPU to the pod. Leave "nvidia" if you set the
+  # nvidia runtime as a RuntimeClass; set "" to disable (CPU-only).
+  runtimeClassName: "nvidia"
+  # exclusive=true → pod requests `nvidia.com/gpu: 1`. REQUIRED on clusters with
+  # the NVIDIA device plugin / GPU Operator (the standard k8s GPU setup): without
+  # a request the pod gets NO GPU even with runtimeClassName set. To SHARE one
+  # physical GPU with the ollama pod, enable device-plugin time-slicing (it then
+  # advertises >1 nvidia.com/gpu) and both request 1. Set false only on a bare
+  # nvidia-container-runtime (no device plugin) that injects GPUs via env.
+  exclusive: true
+
+# First-run admin. The chart has no default password; give admin.password at install time,
+# or point admin.existingSecret at a Secret you created.
+admin:
+  user: admin
+  password: ""
+  existingSecret: ""        # name of a Secret with keys VLM_ADMIN_USER / VLM_ADMIN_PASS
+
+env:
+  VLM_HW_ACCEL: "auto"      # auto | off  (auto uses cuvid if ffmpeg has it)
+  VLM_DISPLAY_FPS: "15"
+  VLM_SESSION_TTL_SEC: "43200"
+  VLM_CAPTURE_STALE_SEC: "60"
+
+service:
+  web:
+    type: NodePort          # edge nodes are reached directly; use ClusterIP + ingress if you have one
+    port: 8000
+    nodePort: 30085
+  mqtt:
+    enabled: true           # embedded MQTT broker for signal lights
+    type: NodePort          # signal-light devices connect from the LAN
+    port: 1883
+    nodePort: 31883
+
+ingress:
+  enabled: false             # k3s edge installs often run without an ingress controller
+  className: "traefik"       # k3s default ingress
+  host: "vlm.local"
+  annotations: {}
+
+# Persistent data (DB, media, backups, cameras.json, snapshots, clips) — all
+# under VLM_DATA_DIR=/data on one PVC. k3s ships the local-path provisioner.
+persistence:
+  enabled: true
+  storageClass: "local-path"
+  accessMode: ReadWriteOnce
+  size: 20Gi
+
+resources: {}
+  # limits: { memory: 8Gi }
+  # requests: { cpu: "2", memory: 4Gi }
+
+# Shared memory (/dev/shm) — the k8s equivalent of `docker run --ipc=host`.
+# torch/ultralytics need more than the 64Mi default. Backed by RAM (counts
+# against the pod's memory).
+shm:
+  enabled: true
+  size: 1Gi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ── Ollama (the VLM engine) as a pod in the same release ──────────────
+# Runs Ollama next to vlm-app on the same node. Off by default from 0.1.2: edge
+# nodes usually already run Ollama on the host. Enable to bundle it instead.
+ollama:
+  enabled: false
+  image: ollama/ollama:latest
+  # Optional model to pull on first start (leave "" to pull manually later).
+  pullModel: "ministral-3:8b"
+  service:
+    port: 11434
+  persistence:
+    enabled: true
+    storageClass: "local-path"
+    size: 60Gi              # VLM weights are large
+  resources: {}
+
+# When ollama.enabled=false, point vlm-app at your external Ollama. Leave it empty to
+# keep the Ollama URL from the app's own settings (web UI / cameras.json on the data
+# volume) -- the app only overrides its setting when this is non-empty.
+externalOllamaUrl: ""       # e.g. http://<ollama-host>:11434

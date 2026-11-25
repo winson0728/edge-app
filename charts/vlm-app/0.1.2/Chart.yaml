@@ -1,0 +1,15 @@
+apiVersion: v2
+name: vlm-app
+description: VLM-APP — CCTV monitoring with YOLO11 + local VLM (Ollama) for k3s / RKE2 edge nodes with an NVIDIA GPU (x86 RTX 50 series, Jetson Thor, DGX Spark)
+type: application
+version: 0.1.2
+appVersion: "v92.3"
+icon: file://assets/logos/vlm-app.svg
+keywords:
+  - cctv
+  - vlm
+  - yolo
+  - edge-ai
+  - jetson
+  - dgx-spark
+  - rtx

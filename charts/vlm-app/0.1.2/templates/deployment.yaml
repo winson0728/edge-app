@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vlm-app.fullname" . }}
+  labels:
+    {{- include "vlm-app.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate            # single-writer SQLite + RWO PVC
+  selector:
+    matchLabels:
+      {{- include "vlm-app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vlm-app.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.gpu.runtimeClassName }}
+      runtimeClassName: {{ .Values.gpu.runtimeClassName }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: vlm-app
+          image: "{{ .Values.image.repository }}:{{ include "vlm-app.imageTag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: web
+              containerPort: 8000
+            {{- if .Values.service.mqtt.enabled }}
+            - name: mqtt
+              containerPort: 1883
+            {{- end }}
+          env:
+            - name: VLM_OLLAMA_URL
+              value: {{ include "vlm-app.ollamaUrl" . | quote }}
+            {{- range $k, $v := .Values.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.admin.existingSecret | default (printf "%s-admin" (include "vlm-app.fullname" .)) }}
+          {{- if .Values.gpu.exclusive }}
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+              {{- with .Values.resources.limits }}{{- toYaml . | nindent 14 }}{{- end }}
+            {{- with .Values.resources.requests }}
+            requests:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
+          {{- else }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- end }}
+          readinessProbe:
+            httpGet: { path: /healthz, port: web }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: web }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            {{- if .Values.shm.enabled }}
+            - name: dshm
+              mountPath: /dev/shm
+            {{- end }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "vlm-app.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.shm.enabled }}
+        # k8s equivalent of `docker run --ipc=host`: NGC/torch (DataLoader,
+        # pinned memory, NCCL) needs more than the 64Mi default /dev/shm.
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.shm.size }}
+        {{- end }}

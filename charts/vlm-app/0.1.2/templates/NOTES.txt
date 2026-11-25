@@ -1,0 +1,30 @@
+VLM-APP deployed as release "{{ .Release.Name }}" (image vlm-app:{{ include "vlm-app.imageTag" . }}).
+
+1. Web UI:
+{{- if .Values.ingress.enabled }}
+   http://{{ .Values.ingress.host }}/    (add a hosts entry → node IP)
+{{- else if eq .Values.service.web.type "NodePort" }}
+   http://<node-ip>:{{ .Values.service.web.nodePort | default "<nodePort>" }}/
+{{- else }}
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "vlm-app.fullname" . }} 8000:{{ .Values.service.web.port }}
+   → http://localhost:8000/
+{{- end }}
+   Login with the admin user / password you set at install time.
+
+{{- if .Values.service.mqtt.enabled }}
+
+2. MQTT signal lights → connect to  <node-ip>:{{ .Values.service.mqtt.nodePort }}  topic /Sos
+{{- end }}
+
+3. Ollama:
+{{- if .Values.ollama.enabled }}
+   In-cluster at {{ include "vlm-app.ollamaUrl" . }}
+   {{- if .Values.ollama.pullModel }} (pulling model "{{ .Values.ollama.pullModel }}" on first start){{ end }}
+{{- else }}
+   External: {{ .Values.externalOllamaUrl | default "(from the app's own settings: web UI / cameras.json)" }}
+{{- end }}
+
+4. Health:  kubectl -n {{ .Release.Namespace }} get pods
+            curl http://<web>/healthz   and   /metrics (Prometheus)
+
+Docs: README.md in this chart.

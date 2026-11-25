@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "vlm-app.fullname" . }}
+  labels:
+    {{- include "vlm-app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.web.type }}
+  selector:
+    {{- include "vlm-app.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: web
+      port: {{ .Values.service.web.port }}
+      targetPort: web
+      {{- if and (eq .Values.service.web.type "NodePort") .Values.service.web.nodePort }}
+      nodePort: {{ .Values.service.web.nodePort }}
+      {{- end }}
+{{- if .Values.service.mqtt.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "vlm-app.fullname" . }}-mqtt
+  labels:
+    {{- include "vlm-app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.mqtt.type }}
+  selector:
+    {{- include "vlm-app.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: mqtt
+      port: {{ .Values.service.mqtt.port }}
+      targetPort: mqtt
+      {{- if and (eq .Values.service.mqtt.type "NodePort") .Values.service.mqtt.nodePort }}
+      nodePort: {{ .Values.service.mqtt.nodePort }}
+      {{- end }}
+{{- end }}
